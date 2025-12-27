@@ -1,0 +1,75 @@
+{
+  "station": "A365",
+  "year": 2010,
+  "months": [
+    {
+      "m": 1,
+      "p": null,
+      "tmean": null
+    },
+    {
+      "m": 2,
+      "p": null,
+      "tmean": null
+    },
+    {
+      "m": 3,
+      "p": null,
+      "tmean": null
+    },
+    {
+      "m": 4,
+      "p": null,
+      "tmean": null
+    },
+    {
+      "m": 5,
+      "p": null,
+      "tmean": null
+    },
+    {
+      "m": 6,
+      "p": 0.2,
+      "tmean": 27.0
+    },
+    {
+      "m": 7,
+      "p": 0.4,
+      "tmean": 26.6
+    },
+    {
+      "m": 8,
+      "p": 0.0,
+      "tmean": 27.2
+    },
+    {
+      "m": 9,
+      "p": 0.0,
+      "tmean": 28.8
+    },
+    {
+      "m": 10,
+      "p": 15.2,
+      "tmean": 29.5
+    },
+    {
+      "m": 11,
+      "p": 30.6,
+      "tmean": 28.8
+    },
+    {
+      "m": 12,
+      "p": 52.0,
+      "tmean": 26.5
+    }
+  ],
+  "annual": {
+    "p_total": 98.4,
+    "p_month_mean": 14.1,
+    "p_month_min": 0.0,
+    "p_month_max": 52.0,
+    "tmean": 27.8,
+    "tmin": 26.5,
+    "tmax": 29.5
+  }
+}

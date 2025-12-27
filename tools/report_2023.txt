@@ -1,0 +1,22 @@
+Relatório INMET 2023
+RAW_DIR: C:\Users\User\Documents\climogramas-br\raw\estacoes.2023
+Geradas: 550 estações
+Puladas: 17 arquivos
+
+- dados_insuficientes: INMET_CO_MT_A921_SAO FELIX  DO ARAGUAIA_01-01-2023_A_31-12-2023.CSV | temps=0 prec=0
+- dados_insuficientes: INMET_NE_BA_A422_ABROLHOS_01-01-2023_A_31-12-2023.CSV | temps=0 prec=0
+- dados_insuficientes: INMET_NE_MA_A217_FAROL de SANTANA_01-01-2023_A_31-12-2023.CSV | temps=0 prec=0
+- dados_insuficientes: INMET_NE_PE_A301_RECIFE_01-01-2023_A_31-12-2023.CSV | temps=0 prec=0
+- dados_insuficientes: INMET_NE_RN_A344_CALCANHAR_01-01-2023_A_31-12-2023.CSV | temps=0 prec=0
+- dados_insuficientes: INMET_NE_SE_A451_ITABAIANA_01-01-2023_A_31-12-2023.CSV | temps=0 prec=0
+- dados_insuficientes: INMET_N_AC_A136_PORTO WALTER_01-01-2023_A_31-12-2023.CSV | temps=0 prec=0
+- dados_insuficientes: INMET_N_AC_A137_MARECHAL THAUMATURGO_01-01-2023_A_31-12-2023.CSV | temps=0 prec=0
+- dados_insuficientes: INMET_N_AM_A109_EIRUNEPE_01-01-2023_A_31-12-2023.CSV | temps=0 prec=0
+- dados_insuficientes: INMET_N_PA_A216_SAO FELIX DO XINGU_01-01-2023_A_31-12-2023.CSV | temps=0 prec=0
+- dados_insuficientes: INMET_N_PA_A227_SOURE_01-01-2023_A_31-12-2023.CSV | temps=0 prec=0
+- dados_insuficientes: INMET_N_PA_A228_BREVES_01-01-2023_A_31-12-2023.CSV | temps=0 prec=0
+- dados_insuficientes: INMET_N_PA_A230_SERRA DOS CARAJAS_01-01-2023_A_31-12-2023.CSV | temps=1 prec=0
+- dados_insuficientes: INMET_N_PA_A235_NOVO REPARTIMENTO_01-01-2023_A_31-12-2023.CSV | temps=0 prec=0
+- dados_insuficientes: INMET_N_PA_A236_CAMETA_01-01-2023_A_31-12-2023.CSV | temps=0 prec=0
+- dados_insuficientes: INMET_N_PA_A240_MARABA_01-01-2023_A_31-12-2023.CSV | temps=0 prec=0
+- dados_insuficientes: INMET_N_PA_A246_MINA DO PALITO_01-01-2023_A_31-12-2023.CSV | temps=4 prec=4

@@ -1,0 +1,75 @@
+{
+  "station": "A220",
+  "year": 2012,
+  "months": [
+    {
+      "m": 1,
+      "p": null,
+      "tmean": 27.9
+    },
+    {
+      "m": 2,
+      "p": null,
+      "tmean": 26.5
+    },
+    {
+      "m": 3,
+      "p": null,
+      "tmean": 26.2
+    },
+    {
+      "m": 4,
+      "p": null,
+      "tmean": 26.9
+    },
+    {
+      "m": 5,
+      "p": null,
+      "tmean": 27.3
+    },
+    {
+      "m": 6,
+      "p": null,
+      "tmean": 27.0
+    },
+    {
+      "m": 7,
+      "p": null,
+      "tmean": 27.5
+    },
+    {
+      "m": 8,
+      "p": null,
+      "tmean": 27.9
+    },
+    {
+      "m": 9,
+      "p": null,
+      "tmean": 28.9
+    },
+    {
+      "m": 10,
+      "p": null,
+      "tmean": 29.5
+    },
+    {
+      "m": 11,
+      "p": null,
+      "tmean": 30.1
+    },
+    {
+      "m": 12,
+      "p": null,
+      "tmean": 29.5
+    }
+  ],
+  "annual": {
+    "p_total": null,
+    "p_month_mean": null,
+    "p_month_min": null,
+    "p_month_max": null,
+    "tmean": 27.9,
+    "tmin": 26.2,
+    "tmax": 30.1
+  }
+}

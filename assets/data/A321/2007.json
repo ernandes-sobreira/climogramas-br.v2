@@ -1,0 +1,75 @@
+{
+  "station": "A321",
+  "year": 2007,
+  "months": [
+    {
+      "m": 1,
+      "p": null,
+      "tmean": null
+    },
+    {
+      "m": 2,
+      "p": null,
+      "tmean": null
+    },
+    {
+      "m": 3,
+      "p": null,
+      "tmean": null
+    },
+    {
+      "m": 4,
+      "p": null,
+      "tmean": null
+    },
+    {
+      "m": 5,
+      "p": null,
+      "tmean": null
+    },
+    {
+      "m": 6,
+      "p": null,
+      "tmean": null
+    },
+    {
+      "m": 7,
+      "p": 8.4,
+      "tmean": 26.4
+    },
+    {
+      "m": 8,
+      "p": 1.2,
+      "tmean": 26.5
+    },
+    {
+      "m": 9,
+      "p": 1.8,
+      "tmean": 27.3
+    },
+    {
+      "m": 10,
+      "p": 0.0,
+      "tmean": 28.6
+    },
+    {
+      "m": 11,
+      "p": 0.0,
+      "tmean": 29.4
+    },
+    {
+      "m": 12,
+      "p": 51.4,
+      "tmean": 29.0
+    }
+  ],
+  "annual": {
+    "p_total": 62.8,
+    "p_month_mean": 10.5,
+    "p_month_min": 0.0,
+    "p_month_max": 51.4,
+    "tmean": 27.9,
+    "tmin": 26.4,
+    "tmax": 29.4
+  }
+}

@@ -1,0 +1,76 @@
+{
+  "station": "A038",
+  "year": 2024,
+  "months": [
+    {
+      "m": 1,
+      "tmean": 24.05,
+      "p": null
+    },
+    {
+      "m": 2,
+      "tmean": 24.75,
+      "p": null
+    },
+    {
+      "m": 3,
+      "tmean": 25.54,
+      "p": null
+    },
+    {
+      "m": 4,
+      "tmean": 25.18,
+      "p": null
+    },
+    {
+      "m": 5,
+      "tmean": 25.63,
+      "p": null
+    },
+    {
+      "m": 6,
+      "tmean": 24.5,
+      "p": null
+    },
+    {
+      "m": 7,
+      "tmean": 24.47,
+      "p": null
+    },
+    {
+      "m": 8,
+      "tmean": 26.12,
+      "p": null
+    },
+    {
+      "m": 9,
+      "tmean": 28.11,
+      "p": null
+    },
+    {
+      "m": 10,
+      "tmean": 27.6,
+      "p": 94.4
+    },
+    {
+      "m": 11,
+      "tmean": 24.57,
+      "p": 84.4
+    },
+    {
+      "m": 12,
+      "tmean": null,
+      "p": null
+    }
+  ],
+  "annual": {
+    "tmin": 16.9,
+    "tmean": 25.55,
+    "tmax": 36.8,
+    "p_total": 178.8,
+    "p_month_min": 84.4,
+    "p_month_mean": 14.9,
+    "p_month_max": 94.4,
+    "coverage": 0.866
+  }
+}

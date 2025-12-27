@@ -1,0 +1,241 @@
+RAW_DIR = r"C:\Users\User\Documents\climogramas-br\raw\estacoes.2024"
+OUT_DATA = r"C:\Users\User\Documents\climogramas-br\assets\data"
+OUT_STATIONS = r"C:\Users\User\Documents\climogramas-br\assets\stations.json"
+
+import os, json, unicodedata, csv, re
+from datetime import datetime
+
+YEAR = 2024
+
+# >>> MUDE SÓ ISSO se precisar
+RAW_DIR = r"C:\climogramas-br\raw\estacoes.2024"
+OUT_DATA = r"C:\climogramas-br\assets\data"
+OUT_STATIONS = r"C:\climogramas-br\assets\stations.json"
+
+os.makedirs(OUT_DATA, exist_ok=True)
+
+MONTHS = list(range(1,13))
+
+def norm(s):
+    if s is None: return ""
+    s = str(s)
+    s = unicodedata.normalize("NFKD", s).encode("ascii","ignore").decode()
+    return s.strip()
+
+def to_float(x):
+    if x is None: return None
+    s = str(x).strip().replace(",", ".")
+    if s == "" or s.lower() in ("nan","null","none","-9999","-9999.0"): return None
+    try: return float(s)
+    except: return None
+
+def parse_station_id(fname):
+    # procura A000..A999
+    m = re.search(r"_A\d{3}_", fname.upper())
+    if m:
+        return m.group(0).strip("_")
+    # fallback: tenta partes
+    parts = fname.split("_")
+    for p in parts:
+        p = p.upper()
+        if p.startswith("A") and len(p)==4 and p[1:].isdigit():
+            return p
+    return "UNKNOWN"
+
+def find_idx(headers, keys):
+    H = [norm(h).upper() for h in headers]
+    for k in keys:
+        ku = norm(k).upper()
+        for i, h in enumerate(H):
+            if ku and ku in h:
+                return i
+    return None
+
+def try_parse_date(s):
+    if not s: return None
+    s = str(s).strip()
+    # tenta dd/mm/yyyy
+    for fmt in ("%d/%m/%Y", "%Y-%m-%d", "%d-%m-%Y"):
+        try:
+            return datetime.strptime(s[:10], fmt)
+        except:
+            pass
+    return None
+
+stations = []
+files = [f for f in os.listdir(RAW_DIR) if f.lower().endswith(".csv")]
+print("Total CSVs:", len(files))
+
+log_path = os.path.join(os.path.dirname(OUT_STATIONS), f"build_log_{YEAR}.txt")
+os.makedirs(os.path.dirname(OUT_STATIONS), exist_ok=True)
+
+bad = 0
+with open(log_path, "w", encoding="utf-8") as log:
+    for i, fname in enumerate(files, 1):
+        path = os.path.join(RAW_DIR, fname)
+        station_id = parse_station_id(fname)
+
+        # fallback de nome/uf pelo nome do arquivo
+        parts = fname.split("_")
+        fallback_uf = parts[2] if len(parts) > 2 else "—"
+        fallback_name = parts[4] if len(parts) > 4 else station_id
+
+        # acumuladores mensais
+        tsum = {m: 0.0 for m in MONTHS}
+        tcnt = {m: 0 for m in MONTHS}
+        psum = {m: 0.0 for m in MONTHS}
+
+        # anual
+        tmin = None
+        tmax = None
+        tmean_sum = 0.0
+        tmean_cnt = 0
+        p_total = 0.0
+
+        # completude por dia (qualquer registro válido de T ou P no dia)
+        valid_days = set()
+
+        try:
+            # INMET costuma vir ; e latin1
+            with open(path, "r", encoding="latin1", errors="ignore", newline="") as f:
+                reader = csv.reader(f, delimiter=";")
+                headers = None
+
+                for row in reader:
+                    if not row:
+                        continue
+
+                    # achar primeira linha que parece cabeçalho da tabela (tem DATA e TEMPERATURA etc.)
+                    if headers is None:
+                        joined = " ".join([norm(x).upper() for x in row])
+                        if ("DATA" in joined or "DT_MEDICAO" in joined) and ("TEMP" in joined or "BULBO" in joined or "TEMPERATURA" in joined):
+                            headers = row
+                            idx_date = find_idx(headers, ["DT_MEDICAO", "DATA"])
+                            idx_hour = find_idx(headers, ["HR_MEDICAO", "HORA", "HOUR"])
+                            idx_t = find_idx(headers, ["TEMPERATURA DO AR - BULBO SECO", "BULBO SECO", "TEMPERATURA", "TEMP"])
+                            idx_p = find_idx(headers, ["PRECIPITACAO TOTAL", "PRECIPITAÇÃO TOTAL", "PRECIP", "CHUVA"])
+                            idx_name = find_idx(headers, ["DC_NOME", "NOME", "ESTACAO", "ESTAÇÃO"])
+                            idx_uf = find_idx(headers, ["SG_ESTADO", "UF", "ESTADO"])
+                            idx_lat = find_idx(headers, ["VL_LATITUDE", "LATITUDE"])
+                            idx_lon = find_idx(headers, ["VL_LONGITUDE", "LONGITUDE"])
+                            idx_alt = find_idx(headers, ["VL_ALTITUDE", "ALTITUDE"])
+                        continue
+
+                    # já temos headers, agora linhas de dados
+                    if idx_date is None or idx_t is None:
+                        continue
+
+                    # protege linha curta
+                    if idx_date >= len(row) or idx_t >= len(row):
+                        continue
+
+                    d0 = row[idx_date].strip() if idx_date is not None else ""
+                    dt = try_parse_date(d0)
+                    if dt is None:
+                        continue
+
+                    m = dt.month
+
+                    tval = to_float(row[idx_t]) if idx_t is not None and idx_t < len(row) else None
+                    pval = to_float(row[idx_p]) if idx_p is not None and idx_p < len(row) else None
+
+                    # captura metadados da primeira linha útil
+                    if tmean_cnt == 0:
+                        name = norm(row[idx_name]) if idx_name is not None and idx_name < len(row) else norm(fallback_name)
+                        uf = norm(row[idx_uf]) if idx_uf is not None and idx_uf < len(row) else norm(fallback_uf)
+                        lat = to_float(row[idx_lat]) if idx_lat is not None and idx_lat < len(row) else None
+                        lon = to_float(row[idx_lon]) if idx_lon is not None and idx_lon < len(row) else None
+                        alt = to_float(row[idx_alt]) if idx_alt is not None and idx_alt < len(row) else None
+
+                    any_valid = False
+
+                    if tval is not None:
+                        tsum[m] += tval
+                        tcnt[m] += 1
+                        tmean_sum += tval
+                        tmean_cnt += 1
+                        tmin = tval if tmin is None else min(tmin, tval)
+                        tmax = tval if tmax is None else max(tmax, tval)
+                        any_valid = True
+
+                    if pval is not None:
+                        psum[m] += pval
+                        p_total += pval
+                        any_valid = True
+
+                    if any_valid:
+                        valid_days.add(dt.date())
+
+            # se nunca pegou metadados, usa fallback
+            if tmean_cnt == 0:
+                name = norm(fallback_name)
+                uf = norm(fallback_uf)
+                lat = lon = alt = None
+
+            # montar months
+            months = []
+            for mm in MONTHS:
+                tmean_m = (tsum[mm] / tcnt[mm]) if tcnt[mm] else None
+                months.append({
+                    "m": mm,
+                    "tmean": None if tmean_m is None else round(tmean_m, 2),
+                    "p": round(psum[mm], 1)
+                })
+
+            tmean = (tmean_sum / tmean_cnt) if tmean_cnt else None
+
+            p_vals = [x["p"] for x in months if x["p"] is not None]
+            p_month_min = min(p_vals) if p_vals else None
+            p_month_max = max(p_vals) if p_vals else None
+            p_month_mean = (sum(p_vals) / 12.0) if p_vals else None
+
+            coverage = len(valid_days) / 366.0  # 2024 bissexto
+
+            annual = {
+                "tmin": None if tmin is None else round(tmin, 2),
+                "tmean": None if tmean is None else round(tmean, 2),
+                "tmax": None if tmax is None else round(tmax, 2),
+                "p_total": round(p_total, 1),
+                "p_month_min": None if p_month_min is None else round(p_month_min, 1),
+                "p_month_mean": None if p_month_mean is None else round(p_month_mean, 1),
+                "p_month_max": None if p_month_max is None else round(p_month_max, 1),
+                "coverage": round(coverage, 3)
+            }
+
+            out_dir = os.path.join(OUT_DATA, station_id)
+            os.makedirs(out_dir, exist_ok=True)
+
+            with open(os.path.join(out_dir, f"{YEAR}.json"), "w", encoding="utf-8") as jf:
+                json.dump({
+                    "station": station_id,
+                    "year": YEAR,
+                    "months": months,
+                    "annual": annual
+                }, jf, ensure_ascii=False, indent=2)
+
+            stations.append({
+                "id": station_id,
+                "name": name if name else station_id,
+                "uf": uf if uf else "—",
+                "lat": lat,
+                "lon": lon,
+                "alt": alt,
+                "years": [YEAR]
+            })
+
+            if i % 25 == 0:
+                print(f"[{i}/{len(files)}] ok... (última: {station_id})")
+
+        except Exception as e:
+            bad += 1
+            log.write(f"ERRO {fname}: {repr(e)}\n")
+            continue
+
+# salvar stations.json
+stations_sorted = sorted(stations, key=lambda x: (x.get("uf",""), x.get("name","")))
+
+with open(OUT_STATIONS, "w", encoding="utf-8") as f:
+    json.dump(stations_sorted, f, ensure_ascii=False, indent=2)
+
+print(f"OK — {len(stations)} estações processadas. Erros: {bad}")
+print("Log:", log_path)

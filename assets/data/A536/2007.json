@@ -1,0 +1,75 @@
+{
+  "station": "A536",
+  "year": 2007,
+  "months": [
+    {
+      "m": 1,
+      "p": null,
+      "tmean": null
+    },
+    {
+      "m": 2,
+      "p": null,
+      "tmean": null
+    },
+    {
+      "m": 3,
+      "p": null,
+      "tmean": null
+    },
+    {
+      "m": 4,
+      "p": null,
+      "tmean": null
+    },
+    {
+      "m": 5,
+      "p": null,
+      "tmean": null
+    },
+    {
+      "m": 6,
+      "p": 2.2,
+      "tmean": 19.7
+    },
+    {
+      "m": 7,
+      "p": 21.0,
+      "tmean": 19.6
+    },
+    {
+      "m": 8,
+      "p": 0.0,
+      "tmean": 20.6
+    },
+    {
+      "m": 9,
+      "p": 2.4,
+      "tmean": 23.2
+    },
+    {
+      "m": 10,
+      "p": 58.2,
+      "tmean": 24.9
+    },
+    {
+      "m": 11,
+      "p": 121.2,
+      "tmean": 23.1
+    },
+    {
+      "m": 12,
+      "p": 179.2,
+      "tmean": 24.0
+    }
+  ],
+  "annual": {
+    "p_total": 384.2,
+    "p_month_mean": 54.9,
+    "p_month_min": 0.0,
+    "p_month_max": 179.2,
+    "tmean": 22.2,
+    "tmin": 19.6,
+    "tmax": 24.9
+  }
+}

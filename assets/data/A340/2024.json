@@ -1,0 +1,76 @@
+{
+  "station": "A340",
+  "year": 2024,
+  "months": [
+    {
+      "m": 1,
+      "tmean": 28.31,
+      "p": 52.8
+    },
+    {
+      "m": 2,
+      "tmean": 28.18,
+      "p": null
+    },
+    {
+      "m": 3,
+      "tmean": 27.25,
+      "p": null
+    },
+    {
+      "m": 4,
+      "tmean": 26.99,
+      "p": null
+    },
+    {
+      "m": 5,
+      "tmean": 26.92,
+      "p": null
+    },
+    {
+      "m": 6,
+      "tmean": 26.87,
+      "p": null
+    },
+    {
+      "m": 7,
+      "tmean": null,
+      "p": null
+    },
+    {
+      "m": 8,
+      "tmean": null,
+      "p": null
+    },
+    {
+      "m": 9,
+      "tmean": null,
+      "p": null
+    },
+    {
+      "m": 10,
+      "tmean": null,
+      "p": null
+    },
+    {
+      "m": 11,
+      "tmean": null,
+      "p": null
+    },
+    {
+      "m": 12,
+      "tmean": null,
+      "p": null
+    }
+  ],
+  "annual": {
+    "tmin": 21.6,
+    "tmean": 27.52,
+    "tmax": 38.2,
+    "p_total": 52.8,
+    "p_month_min": 52.8,
+    "p_month_mean": 4.4,
+    "p_month_max": 52.8,
+    "coverage": 0.421
+  }
+}

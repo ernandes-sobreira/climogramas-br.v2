@@ -1,0 +1,75 @@
+{
+  "station": "A320",
+  "year": 2007,
+  "months": [
+    {
+      "m": 1,
+      "p": null,
+      "tmean": null
+    },
+    {
+      "m": 2,
+      "p": null,
+      "tmean": null
+    },
+    {
+      "m": 3,
+      "p": null,
+      "tmean": null
+    },
+    {
+      "m": 4,
+      "p": null,
+      "tmean": null
+    },
+    {
+      "m": 5,
+      "p": null,
+      "tmean": null
+    },
+    {
+      "m": 6,
+      "p": null,
+      "tmean": null
+    },
+    {
+      "m": 7,
+      "p": 39.8,
+      "tmean": 24.3
+    },
+    {
+      "m": 8,
+      "p": 263.6,
+      "tmean": 24.5
+    },
+    {
+      "m": 9,
+      "p": 76.8,
+      "tmean": 24.9
+    },
+    {
+      "m": 10,
+      "p": 23.8,
+      "tmean": 25.7
+    },
+    {
+      "m": 11,
+      "p": 28.4,
+      "tmean": 26.3
+    },
+    {
+      "m": 12,
+      "p": 11.8,
+      "tmean": 26.9
+    }
+  ],
+  "annual": {
+    "p_total": 444.2,
+    "p_month_mean": 74.0,
+    "p_month_min": 11.8,
+    "p_month_max": 263.6,
+    "tmean": 25.4,
+    "tmin": 24.3,
+    "tmax": 26.9
+  }
+}

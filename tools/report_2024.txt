@@ -1,0 +1,25 @@
+Relatório INMET 2024
+RAW_DIR: C:\Users\User\Documents\climogramas-br\raw\estacoes.2024
+Geradas: 545 estações
+Puladas: 20 arquivos
+
+- dados_insuficientes: INMET_CO_MT_A914_JUARA_01-01-2024_A_31-12-2024.CSV | temps=0 prec=0
+- dados_insuficientes: INMET_CO_MT_A921_SAO FELIX  DO ARAGUAIA_01-01-2024_A_31-12-2024.CSV | temps=0 prec=0
+- dados_insuficientes: INMET_NE_BA_A422_ABROLHOS_01-01-2024_A_31-12-2024.CSV | temps=0 prec=0
+- dados_insuficientes: INMET_NE_CE_A324_TAUA_01-01-2024_A_31-12-2024.CSV | temps=0 prec=0
+- dados_insuficientes: INMET_NE_MA_A217_FAROL de SANTANA_01-01-2024_A_31-12-2024.CSV | temps=0 prec=0
+- dados_insuficientes: INMET_NE_PI_A377_ANGICAL DO PIAUI_01-01-2024_A_31-12-2024.CSV | temps=0 prec=0
+- dados_insuficientes: INMET_NE_SE_A419_POCO VERDE_01-01-2024_A_31-12-2024.CSV | temps=0 prec=0
+- dados_insuficientes: INMET_NE_SE_A451_ITABAIANA_01-01-2024_A_31-12-2024.CSV | temps=0 prec=0
+- dados_insuficientes: INMET_N_AC_A102_PARQUE ESTADUAL CHANDLESS_01-01-2024_A_31-12-2024.CSV | temps=0 prec=0
+- dados_insuficientes: INMET_N_AC_A136_PORTO WALTER_01-01-2024_A_31-12-2024.CSV | temps=0 prec=0
+- dados_insuficientes: INMET_N_AC_A137_MARECHAL THAUMATURGO_01-01-2024_A_31-12-2024.CSV | temps=0 prec=0
+- dados_insuficientes: INMET_N_AM_A109_EIRUNEPE_01-01-2024_A_31-12-2024.CSV | temps=0 prec=0
+- dados_insuficientes: INMET_N_AM_A126_PRESIDENTE FIGUEIREDO_01-01-2024_A_31-12-2024.CSV | temps=0 prec=0
+- dados_insuficientes: INMET_N_PA_A228_BREVES_01-01-2024_A_31-12-2024.CSV | temps=0 prec=0
+- dados_insuficientes: INMET_N_PA_A230_SERRA DOS CARAJAS_01-01-2024_A_31-12-2024.CSV | temps=0 prec=0
+- dados_insuficientes: INMET_N_PA_A236_CAMETA_01-01-2024_A_31-12-2024.CSV | temps=0 prec=0
+- dados_insuficientes: INMET_N_PA_A240_MARABA_01-01-2024_A_31-12-2024.CSV | temps=0 prec=0
+- dados_insuficientes: INMET_N_PA_A246_MINA DO PALITO_01-01-2024_A_31-12-2024.CSV | temps=0 prec=0
+- dados_insuficientes: INMET_N_TO_A043_CAMPOS LINDOS_01-01-2024_A_31-12-2024.CSV | temps=0 prec=0
+- dados_insuficientes: INMET_S_PR_A824_ICARAIMA_01-01-2024_A_31-12-2024.CSV | temps=0 prec=0
