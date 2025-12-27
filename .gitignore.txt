@@ -1,0 +1,10 @@
+# Dados brutos (NUNCA publicar)
+raw/**
+
+# Cache do Python
+__pycache__/
+*.pyc
+
+# Arquivos do sistema
+.DS_Store
+Thumbs.db
