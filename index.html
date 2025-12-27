@@ -16,6 +16,10 @@
     crossorigin=""
   />
 
+  <!-- MarkerCluster (pra ficar igual ao seu print: bolinhas com números) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
+
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <!-- Zoom plugin -->
@@ -111,6 +115,23 @@
             <div class="cardLabel">Chuva total</div>
             <div id="kRain" class="cardValue">—</div>
           </div>
+
+          <div class="card">
+            <div class="cardLabel">Chuva méd (mês)</div>
+            <div id="kRainMean" class="cardValue">—</div>
+          </div>
+          <div class="card">
+            <div class="cardLabel">Chuva máx (mês)</div>
+            <div id="kRainMax" class="cardValue">—</div>
+          </div>
+          <div class="card">
+            <div class="cardLabel">Chuva mín (mês)</div>
+            <div id="kRainMin" class="cardValue">—</div>
+          </div>
+          <div class="card">
+            <div class="cardLabel">Qualidade</div>
+            <div id="kQuality" class="cardValue">—</div>
+          </div>
         </div>
 
         <div class="box">
@@ -121,8 +142,8 @@
         </div>
 
         <div class="chartBox">
-          <canvas id="chart" height="240"></canvas>
-          <div class="chartHint">Dica: no gráfico, use o zoom e passe o mouse para ver valores (tooltips).</div>
+          <canvas id="chart" height="260"></canvas>
+          <div class="chartHint">Dica: use zoom (scroll/pinch) e passe o mouse para ver tooltips. Duplo-clique reseta.</div>
         </div>
       </div>
     </aside>
@@ -139,6 +160,9 @@
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
     crossorigin=""
   ></script>
+
+  <!-- MarkerCluster -->
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 
   <script src="./app.js"></script>
 </body>
