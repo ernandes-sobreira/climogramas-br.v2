@@ -1,283 +1,387 @@
-/* Climogramas BR v2 — app.js
-   - Leaflet + MarkerCluster
-   - Chart.js + Zoom
-   - Busca/lista/ano
-   - Export PNG/CSV
+/* Climogramas BR v2 — app estático (GitHub Pages)
+   Estrutura esperada:
+   - assets/stations.json
+   - assets/years.json
+   - assets/data/<ID>/<YEAR>.json  (ex: assets/data/A001/2024.json)
 */
 
-const $ = (id) => document.getElementById(id);
-
-// Base path seguro para GitHub Pages (repo dentro de subpasta)
-function basePath() {
-  // ex: /climogramas-br.v2/
-  const p = window.location.pathname;
-  if (p.endsWith("/")) return p;
-  return p.substring(0, p.lastIndexOf("/") + 1);
-}
-const BASE = basePath();
+const $ = (sel) => document.querySelector(sel);
 
 const state = {
   stations: [],
   years: [],
-  selectedStation: null,
+  filtered: [],
+  selectedStationId: null,
   selectedYear: null,
   map: null,
-  cluster: null,
-  markersById: new Map(),
+  markersLayer: null,
   chart: null,
-  lastMonthly: null
+  cacheYearData: new Map(), // key: `${id}-${year}` -> parsed
 };
 
-// ---------- Helpers ----------
-function fmt1(x){ return (x==null || Number.isNaN(x)) ? "—" : `${x.toFixed(1)}`; }
-function fmtC(x){ return (x==null || Number.isNaN(x)) ? "—" : `${x.toFixed(1)} °C`; }
-function fmtMM(x){ return (x==null || Number.isNaN(x)) ? "—" : `${x.toFixed(1)} mm`; }
+// Detecta base para GitHub Pages (repo project)
+function computeBase() {
+  // Ex: /climogramas-br.v2/ -> BASE = /climogramas-br.v2/
+  const p = window.location.pathname;
+  if (p.endsWith("/")) return p;
+  return p.substring(0, p.lastIndexOf("/") + 1);
+}
+const BASE = computeBase();
 
-function safeNum(v){
-  if (v==null) return null;
-  const n = Number(v);
-  if (!Number.isFinite(n)) return null;
-  // muitos INMET usam -9999 como missing
-  if (n <= -999) return null;
-  return n;
+function setStatus(msg) {
+  $("#status").textContent = msg;
 }
 
-function stationLabel(s){
-  // tenta ser compatível com diferentes chaves
-  const id = s.id || s.codigo || s.wmo || s.ID || s.station_id;
-  const name = s.name || s.nome || s.estacao || s.station || "SEM NOME";
-  const uf = s.uf || s.UF || s.estado || "";
-  return { id, name, uf };
+function fmt1(x) {
+  if (x == null || Number.isNaN(x)) return "—";
+  return (Math.round(x * 10) / 10).toFixed(1);
+}
+function fmt0(x) {
+  if (x == null || Number.isNaN(x)) return "—";
+  return String(Math.round(x));
+}
+function clamp(n, a, b) { return Math.max(a, Math.min(b, n)); }
+
+function normalizeStation(s) {
+  // tenta cobrir variações de nomes
+  const id = (s.id || s.ID || s.codigo || s.station_id || s.wmo || s.WMO || "").toString().trim();
+  const name = (s.nome || s.name || s.estacao || s.ESTACAO || s.station || "").toString().trim();
+  const uf = (s.uf || s.UF || s.estado || s.state || "").toString().trim();
+  const region = (s.regiao || s.REGIAO || s.region || "").toString().trim();
+
+  // lat/lon podem vir como string com vírgula
+  const latRaw = (s.lat ?? s.latitude ?? s.LATITUDE ?? s.Latitude ?? s.y);
+  const lonRaw = (s.lon ?? s.lng ?? s.longitude ?? s.LONGITUDE ?? s.Longitude ?? s.x);
+
+  const lat = parseFloat(String(latRaw).replace(",", "."));
+  const lon = parseFloat(String(lonRaw).replace(",", "."));
+
+  return {
+    ...s,
+    id,
+    name,
+    uf,
+    region,
+    lat: Number.isFinite(lat) ? lat : null,
+    lon: Number.isFinite(lon) ? lon : null,
+  };
 }
 
-function getLatLng(s){
-  const lat = safeNum(s.lat ?? s.latitude ?? s.LATITUDE);
-  const lon = safeNum(s.lon ?? s.lng ?? s.longitude ?? s.LONGITUDE);
-  if (lat==null || lon==null) return null;
-  return [lat, lon];
+function parseStations(stRaw) {
+  // aceita: array, {stations:[...]}, {data:[...]}, ou objeto { "A001": {...}, ... }
+  let arr = [];
+  if (Array.isArray(stRaw)) arr = stRaw;
+  else if (stRaw && Array.isArray(stRaw.stations)) arr = stRaw.stations;
+  else if (stRaw && Array.isArray(stRaw.data)) arr = stRaw.data;
+  else if (stRaw && typeof stRaw === "object") {
+    arr = Object.entries(stRaw).map(([id, obj]) => ({ id, ...(obj || {}) }));
+  }
+  const norm = arr.map(normalizeStation).filter(s => s.id && Number.isFinite(s.lat) && Number.isFinite(s.lon));
+  // ordena por UF e nome
+  norm.sort((a,b) => (a.uf+a.name).localeCompare(b.uf+b.name, "pt-BR"));
+  return norm;
 }
 
-async function fetchJSON(path){
-  const r = await fetch(path, { cache: "no-store" });
-  if (!r.ok) throw new Error(`HTTP ${r.status} em ${path}`);
-  return await r.json();
+function parseYears(yrRaw) {
+  // aceita: array [2000,2001], {years:[...]}, {data:[...]}, ou objeto {"2000":true,...}
+  let arr = [];
+  if (Array.isArray(yrRaw)) arr = yrRaw;
+  else if (yrRaw && Array.isArray(yrRaw.years)) arr = yrRaw.years;
+  else if (yrRaw && Array.isArray(yrRaw.data)) arr = yrRaw.data;
+  else if (yrRaw && typeof yrRaw === "object") arr = Object.keys(yrRaw).map(Number);
+  arr = arr.map(Number).filter(n => Number.isFinite(n)).sort((a,b)=>a-b);
+  return arr;
 }
 
-function monthNames(){
-  return ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+// Carrega JSON com tratamento de erro bom
+async function loadJSON(path) {
+  const url = BASE + path.replace(/^\.\//, "");
+  const res = await fetch(url, { cache: "no-cache" });
+  if (!res.ok) {
+    const text = await res.text().catch(()=> "");
+    throw new Error(`HTTP ${res.status} ao carregar ${url}\n${text.slice(0,200)}`);
+  }
+  return await res.json();
 }
 
-// ---------- UI render ----------
-function renderYears(){
-  const sel = $("yearSel");
+function buildYearOptions() {
+  const sel = $("#yearSel");
   sel.innerHTML = "";
-  for (const y of state.years) {
+  // default: último ano
+  const years = state.years;
+  const last = years[years.length - 1] ?? new Date().getFullYear();
+
+  years.forEach(y => {
     const opt = document.createElement("option");
     opt.value = String(y);
     opt.textContent = String(y);
     sel.appendChild(opt);
-  }
-  // default: último ano
-  state.selectedYear = state.years[state.years.length - 1] ?? null;
-  if (state.selectedYear) sel.value = String(state.selectedYear);
+  });
+
+  state.selectedYear = last;
+  sel.value = String(last);
 }
 
-function renderStationList(list){
-  const wrap = $("stationList");
-  wrap.innerHTML = "";
-
-  for (const s of list) {
-    const {id, name, uf} = stationLabel(s);
-    const div = document.createElement("div");
-    div.className = "item" + (state.selectedStation && stationLabel(state.selectedStation).id === id ? " active" : "");
-    div.innerHTML = `
-      <strong>${name}${uf ? ` (${uf})` : ""}</strong>
-      <div class="meta">ID ${id}</div>
-    `;
-    div.addEventListener("click", () => selectStationById(id, true));
-    wrap.appendChild(div);
-  }
-
-  $("countLbl").textContent = `${list.length} estações`;
+function renderCount() {
+  $("#countInfo").textContent = `${state.filtered.length} estações`;
 }
 
-function filterStations(q){
-  q = (q || "").trim().toLowerCase();
-  if (!q) return state.stations;
+function stationCardHTML(s, active=false) {
+  const title = `${s.name || "SEM NOME"} (${s.uf || "—"})`;
+  const metaLeft = `ID ${s.id}`;
+  const metaRight = `${fmt1(s.lat)}, ${fmt1(s.lon)}`;
+  return `
+    <div class="station ${active ? "active":""}" data-id="${s.id}">
+      <div class="stationName">${escapeHTML(title)}</div>
+      <div class="stationMeta">
+        <span>${escapeHTML(metaLeft)}</span>
+        <span>${escapeHTML(metaRight)}</span>
+      </div>
+    </div>
+  `;
+}
+
+function escapeHTML(str) {
+  return String(str)
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+}
+
+function renderList() {
+  const list = $("#list");
+  list.innerHTML = state.filtered.map(s => stationCardHTML(s, s.id === state.selectedStationId)).join("");
+}
+
+function filterStations(q) {
+  const t = (q || "").trim().toLowerCase();
+  if (!t) return [...state.stations];
+
   return state.stations.filter(s => {
-    const {id, name, uf} = stationLabel(s);
-    const hay = `${id} ${name} ${uf}`.toLowerCase();
-    return hay.includes(q);
+    const blob = `${s.id} ${s.name} ${s.uf} ${s.region}`.toLowerCase();
+    return blob.includes(t);
   });
 }
 
-function setRightEmpty(){
-  $("selTitle").textContent = "Selecione uma estação";
-  $("selMeta").textContent = "—";
-  $("cTmin").textContent = "—";
-  $("cTmean").textContent = "—";
-  $("cTmax").textContent = "—";
-  $("cRain").textContent = "—";
-  $("sum1").textContent = "—";
-  $("sum2").textContent = "—";
-  $("sum3").textContent = "—";
-}
+function ensureMap() {
+  if (state.map) return;
 
-// ---------- Map ----------
-function initMap(){
-  const map = L.map("map", { preferCanvas: true }).setView([-14.2, -51.9], 4);
+  state.map = L.map("map", { zoomControl: true, preferCanvas: true }).setView([-14.5, -53.0], 4);
 
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    maxZoom: 19,
-    attribution: '&copy; OpenStreetMap'
-  }).addTo(map);
+    maxZoom: 18,
+    attribution: '&copy; OpenStreetMap',
+  }).addTo(state.map);
 
-  const cluster = L.markerClusterGroup({
-    chunkedLoading: true,
-    maxClusterRadius: 45
+  state.markersLayer = L.layerGroup().addTo(state.map);
+}
+
+function markerStyle() {
+  // simples e leve
+  return {
+    radius: 5,
+    fillColor: "#2d7df6",
+    color: "#2d7df6",
+    weight: 1,
+    opacity: 0.8,
+    fillOpacity: 0.7
+  };
+}
+
+function renderMarkers() {
+  ensureMap();
+  state.markersLayer.clearLayers();
+
+  state.filtered.forEach(s => {
+    const m = L.circleMarker([s.lat, s.lon], markerStyle());
+    m.on("click", () => selectStation(s.id, true));
+    m.bindTooltip(`${s.name} (${s.uf})<br><b>${s.id}</b>`, { sticky: true });
+    m.addTo(state.markersLayer);
   });
 
-  for (const s of state.stations) {
-    const {id, name, uf} = stationLabel(s);
-    const ll = getLatLng(s);
-    if (!ll) continue;
+  // se tiver seleção, destaca aproximando
+  if (state.selectedStationId) {
+    const s = state.stations.find(x => x.id === state.selectedStationId);
+    if (s) state.map.panTo([s.lat, s.lon], { animate: true });
+  }
+}
 
-    const m = L.marker(ll, { title: `${name} (${uf})` });
-    m.bindPopup(`<b>${name}${uf ? ` (${uf})` : ""}</b><br/>ID ${id}`);
-    m.on("click", () => selectStationById(id, false));
-    cluster.addLayer(m);
-    state.markersById.set(id, m);
+function focusToFiltered() {
+  ensureMap();
+  const pts = state.filtered
+    .filter(s => Number.isFinite(s.lat) && Number.isFinite(s.lon))
+    .map(s => [s.lat, s.lon]);
+
+  if (!pts.length) return;
+  const b = L.latLngBounds(pts);
+  state.map.fitBounds(b.pad(0.12));
+}
+
+function setStationHeader(s) {
+  $("#stationTitle").textContent = `${s.name} (${s.uf})`;
+  $("#stationMeta").textContent = `ID ${s.id} • ${fmt1(s.lat)}, ${fmt1(s.lon)}`;
+}
+
+function clearRightPanel() {
+  $("#stationTitle").textContent = "Selecione uma estação";
+  $("#stationMeta").textContent = "—";
+  $("#kTmin").textContent = "—";
+  $("#kTmean").textContent = "—";
+  $("#kTmax").textContent = "—";
+  $("#kRain").textContent = "—";
+  $("#summary").innerHTML = `<div class="muted">—</div>`;
+  if (state.chart) {
+    state.chart.data.labels = [];
+    state.chart.data.datasets.forEach(d => d.data = []);
+    state.chart.update();
+  }
+}
+
+function monthLabels() {
+  return ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+}
+
+// ====== DATA READER (flexível) ======
+// Aceita variações do JSON anual, tenta extrair 12 valores para:
+// - precipitação (mm)
+// - temperatura média (°C)
+// também calcula tmin/tmax anual, chuva total, etc.
+function coerceNumber(v) {
+  if (v == null) return null;
+  const n = parseFloat(String(v).replace(",", "."));
+  return Number.isFinite(n) ? n : null;
+}
+
+function extractMonthly(dataYear) {
+  // Tentativas:
+  // 1) dataYear.monthly: [{month:1,rain:..,tmean:..},...]
+  // 2) dataYear.months: array 12
+  // 3) dataYear.precip / dataYear.rain: array 12 + dataYear.tmean: array 12
+  // 4) dataYear.series: { rain:[12], tmean:[12] }
+  // 5) dataYear é array 12 direto
+
+  let rain = null;
+  let tmean = null;
+
+  if (dataYear && Array.isArray(dataYear.monthly)) {
+    const m = dataYear.monthly;
+    const r = new Array(12).fill(null);
+    const t = new Array(12).fill(null);
+    m.forEach(row => {
+      const mi = (row.month ?? row.mes ?? row.MES ?? row.idx ?? row.i);
+      const k = clamp((Number(mi) || 0) - 1, 0, 11);
+      r[k] = coerceNumber(row.rain ?? row.precip ?? row.p ?? row.chuva);
+      t[k] = coerceNumber(row.tmean ?? row.temp ?? row.t ?? row.temperatura);
+    });
+    rain = r; tmean = t;
+  } else if (dataYear && Array.isArray(dataYear.months)) {
+    // months pode ser array de objetos ou números
+    const m = dataYear.months;
+    if (typeof m[0] === "object") {
+      rain = m.map(x => coerceNumber(x.rain ?? x.precip ?? x.chuva));
+      tmean = m.map(x => coerceNumber(x.tmean ?? x.temp ?? x.temperatura));
+    } else {
+      // se for array simples, não dá pra saber se é rain ou temp, então ignora
+    }
+  } else if (dataYear && Array.isArray(dataYear.rain) && Array.isArray(dataYear.tmean)) {
+    rain = dataYear.rain.map(coerceNumber);
+    tmean = dataYear.tmean.map(coerceNumber);
+  } else if (dataYear && Array.isArray(dataYear.precip) && Array.isArray(dataYear.tmean)) {
+    rain = dataYear.precip.map(coerceNumber);
+    tmean = dataYear.tmean.map(coerceNumber);
+  } else if (dataYear && dataYear.series && Array.isArray(dataYear.series.rain) && Array.isArray(dataYear.series.tmean)) {
+    rain = dataYear.series.rain.map(coerceNumber);
+    tmean = dataYear.series.tmean.map(coerceNumber);
+  } else if (Array.isArray(dataYear) && dataYear.length === 12 && typeof dataYear[0] === "object") {
+    // array 12 de objetos
+    rain = dataYear.map(x => coerceNumber(x.rain ?? x.precip ?? x.chuva));
+    tmean = dataYear.map(x => coerceNumber(x.tmean ?? x.temp ?? x.temperatura));
   }
 
-  map.addLayer(cluster);
+  // garante tamanho 12
+  if (!rain || rain.length !== 12) rain = new Array(12).fill(null);
+  if (!tmean || tmean.length !== 12) tmean = new Array(12).fill(null);
 
-  state.map = map;
-  state.cluster = cluster;
+  return { rain, tmean };
 }
 
-function focusOnStation(st){
-  const {id} = stationLabel(st);
-  const m = state.markersById.get(id);
-  if (!m) return;
-  state.cluster.zoomToShowLayer(m, () => {
-    state.map.setView(m.getLatLng(), 9, { animate: true });
-    m.openPopup();
-  });
-}
+function summarizeYear({ rain, tmean }) {
+  const validRain = rain.map((v,i)=>({v,i})).filter(x=>x.v!=null);
+  const validT = tmean.map((v,i)=>({v,i})).filter(x=>x.v!=null);
 
-function showAllStations(){
-  if (!state.map) return;
-  state.map.setView([-14.2, -51.9], 4, { animate: true });
-}
+  const rainTotal = validRain.reduce((a,x)=>a+x.v,0);
+  const tMeanYear = validT.length ? (validT.reduce((a,x)=>a+x.v,0) / validT.length) : null;
+  const tMinYear = validT.length ? Math.min(...validT.map(x=>x.v)) : null;
+  const tMaxYear = validT.length ? Math.max(...validT.map(x=>x.v)) : null;
 
-// ---------- Data decoding ----------
-function decodeMonthly(raw){
-  // Suporta dois formatos:
-  // A) { months: [{m:1, pr:..., tmean:..., tmin:..., tmax:...}, ...] }
-  // B) { monthly: {...} } etc.
-  // C) { m1:..., } (fallback)
-  // Aqui fazemos heurística robusta.
+  const wet = validRain.length ? validRain.reduce((best,x)=> x.v>best.v?x:best, validRain[0]) : null;
+  const dry = validRain.length ? validRain.reduce((best,x)=> x.v<best.v?x:best, validRain[0]) : null;
 
-  const out = {
-    pr: new Array(12).fill(null),
-    tmean: new Array(12).fill(null),
-    tmin: new Array(12).fill(null),
-    tmax: new Array(12).fill(null)
+  const hot = validT.length ? validT.reduce((best,x)=> x.v>best.v?x:best, validT[0]) : null;
+  const cool = validT.length ? validT.reduce((best,x)=> x.v<best.v?x:best, validT[0]) : null;
+
+  return {
+    rainTotal,
+    tMeanYear,
+    tMinYear,
+    tMaxYear,
+    wetMonth: wet ? wet.i : null,
+    wetVal: wet ? wet.v : null,
+    dryMonth: dry ? dry.i : null,
+    dryVal: dry ? dry.v : null,
+    hotMonth: hot ? hot.i : null,
+    hotVal: hot ? hot.v : null,
+    coolMonth: cool ? cool.i : null,
+    coolVal: cool ? cool.v : null
   };
-
-  const months = raw.months || raw.monthly || raw.data || raw;
-  if (Array.isArray(months)) {
-    for (const row of months) {
-      const m = Number(row.m ?? row.month ?? row.MES ?? row.mes);
-      if (!m || m < 1 || m > 12) continue;
-      out.pr[m-1] = safeNum(row.pr ?? row.prec ?? row.precip ?? row.precip_mm ?? row.chuva ?? row.precipitacao);
-      out.tmean[m-1] = safeNum(row.tmean ?? row.temp_mean ?? row.t_med ?? row.tmed ?? row.tm ?? row.temperatura_media);
-      out.tmin[m-1] = safeNum(row.tmin ?? row.temp_min ?? row.t_min ?? row.tmin_c ?? row.tn ?? row.temperatura_minima);
-      out.tmax[m-1] = safeNum(row.tmax ?? row.temp_max ?? row.t_max ?? row.tmax_c ?? row.tx ?? row.temperatura_maxima);
-    }
-    return out;
-  }
-
-  // objeto: tenta achar chaves tipo pr_01 ... pr_12, tmean_01 ...
-  const keys = Object.keys(months || {});
-  const pick = (prefixes, i) => {
-    const m2 = String(i+1).padStart(2,"0");
-    const m1 = String(i+1);
-    for (const p of prefixes) {
-      const candidates = [
-        `${p}${m2}`, `${p}${m1}`,
-        `${p}_${m2}`, `${p}_${m1}`,
-        `${p}-${m2}`, `${p}-${m1}`,
-      ];
-      for (const c of candidates) {
-        if (c in months) return safeNum(months[c]);
-      }
-    }
-    // procura por chave que contenha prefixo + mes
-    for (const k of keys) {
-      const kl = k.toLowerCase();
-      if (prefixes.some(p => kl.startsWith(p.toLowerCase())) && (kl.endsWith(m2) || kl.endsWith(m1))) {
-        return safeNum(months[k]);
-      }
-    }
-    return null;
-  };
-
-  for (let i=0;i<12;i++){
-    out.pr[i] = pick(["pr","prec","precip","chuva","ppt"], i);
-    out.tmean[i] = pick(["tmean","tmed","tm","tempmean","temperatura_media","t_avg"], i);
-    out.tmin[i] = pick(["tmin","tn","tempmin","temperatura_minima"], i);
-    out.tmax[i] = pick(["tmax","tx","tempmax","temperatura_maxima"], i);
-  }
-  return out;
 }
 
-function annualStats(monthly){
-  const allT = monthly.tmean.filter(v=>v!=null);
-  const allMin = monthly.tmin.filter(v=>v!=null);
-  const allMax = monthly.tmax.filter(v=>v!=null);
-  const allPr = monthly.pr.filter(v=>v!=null);
+async function loadStationYear(id, year) {
+  const key = `${id}-${year}`;
+  if (state.cacheYearData.has(key)) return state.cacheYearData.get(key);
 
-  const tmean = allT.length ? allT.reduce((a,b)=>a+b,0)/allT.length : null;
-  const tmin = allMin.length ? Math.min(...allMin) : null;
-  const tmax = allMax.length ? Math.max(...allMax) : null;
-  const prTot = allPr.length ? allPr.reduce((a,b)=>a+b,0) : null;
+  const path = `assets/data/${id}/${year}.json`;
+  const raw = await loadJSON(path);
 
-  // meses extremos chuva
-  let wet = {idx:null, val:null};
-  let dry = {idx:null, val:null};
-  for (let i=0;i<12;i++){
-    const v = monthly.pr[i];
-    if (v==null) continue;
-    if (wet.val==null || v > wet.val) wet = {idx:i, val:v};
-    if (dry.val==null || v < dry.val) dry = {idx:i, val:v};
-  }
-  return { tmean, tmin, tmax, prTot, wet, dry };
+  const { rain, tmean } = extractMonthly(raw);
+  const summary = summarizeYear({ rain, tmean });
+
+  const payload = { raw, rain, tmean, summary };
+  state.cacheYearData.set(key, payload);
+  return payload;
 }
 
-// ---------- Chart ----------
-function initChart(){
-  const ctx = $("chart");
-  Chart.register(window.ChartZoom);
+// ====== CHART ======
+function ensureChart() {
+  if (state.chart) return;
+
+  const ctx = $("#chart").getContext("2d");
+  const labels = monthLabels();
 
   state.chart = new Chart(ctx, {
     type: "bar",
     data: {
-      labels: monthNames(),
+      labels,
       datasets: [
         {
+          type: "bar",
           label: "Precipitação (mm)",
           data: new Array(12).fill(null),
-          yAxisID: "yP",
-          borderWidth: 0
+          yAxisID: "yRain",
+          borderWidth: 0,
+          barPercentage: 0.75,
+          categoryPercentage: 0.75,
         },
         {
+          type: "line",
           label: "Temp. média (°C)",
           data: new Array(12).fill(null),
-          type: "line",
-          yAxisID: "yT",
-          pointRadius: 2,
-          tension: 0.25
+          yAxisID: "yTemp",
+          tension: 0.25,
+          pointRadius: 2.5,
+          pointHoverRadius: 5,
         }
       ]
     },
@@ -286,193 +390,245 @@ function initChart(){
       maintainAspectRatio: false,
       interaction: { mode: "index", intersect: false },
       plugins: {
-        legend: { position: "right" },
+        legend: { display: true, labels: { boxWidth: 12 } },
         tooltip: { enabled: true },
         zoom: {
-          pan: { enabled: true, mode: "x" },
           zoom: {
             wheel: { enabled: true },
             pinch: { enabled: true },
-            mode: "x"
+            mode: "xy",
           },
-          limits: { x: { min: 0, max: 11 } }
+          pan: { enabled: true, mode: "xy" }
         }
       },
       scales: {
-        yP: {
+        yRain: {
           position: "left",
           title: { display: true, text: "Precipitação (mm)" },
-          beginAtZero: true
+          grid: { color: "rgba(15,23,42,.08)" }
         },
-        yT: {
+        yTemp: {
           position: "right",
           title: { display: true, text: "Temperatura (°C)" },
           grid: { drawOnChartArea: false }
-        }
+        },
+        x: { grid: { display: false } }
       }
     }
   });
 
-  // reset zoom ao dar double click
-  ctx.addEventListener("dblclick", () => state.chart.resetZoom());
+  // duplo-clique no canvas reseta zoom
+  $("#chart").addEventListener("dblclick", () => {
+    if (state.chart?.resetZoom) state.chart.resetZoom();
+  });
 }
 
-function updateChart(monthly){
-  state.chart.data.datasets[0].data = monthly.pr.map(v=>v==null ? null : Number(v));
-  state.chart.data.datasets[1].data = monthly.tmean.map(v=>v==null ? null : Number(v));
+function applyYearToUI(id, year, payload) {
+  const s = state.stations.find(x => x.id === id);
+  if (!s) return;
+
+  setStationHeader(s);
+
+  const sum = payload.summary;
+  $("#kTmin").textContent = sum.tMinYear == null ? "—" : `${fmt1(sum.tMinYear)} °C`;
+  $("#kTmean").textContent = sum.tMeanYear == null ? "—" : `${fmt1(sum.tMeanYear)} °C`;
+  $("#kTmax").textContent = sum.tMaxYear == null ? "—" : `${fmt1(sum.tMaxYear)} °C`;
+  $("#kRain").textContent = sum.rainTotal == null ? "—" : `${fmt1(sum.rainTotal)} mm`;
+
+  const m = monthLabels();
+  const html = `
+    <div class="item"><span class="badge">📌</span><div><b>${escapeHTML(id)}</b> • <b>${escapeHTML(String(year))}</b></div></div>
+    <div class="item"><span class="badge">🌧️</span><div><b>Mês mais chuvoso:</b> ${sum.wetMonth==null? "—" : `${m[sum.wetMonth]} (${fmt1(sum.wetVal)} mm)`}</div></div>
+    <div class="item"><span class="badge">🏜️</span><div><b>Mês mais seco:</b> ${sum.dryMonth==null? "—" : `${m[sum.dryMonth]} (${fmt1(sum.dryVal)} mm)`}</div></div>
+    <div class="item"><span class="badge">🔥</span><div><b>Mês mais quente:</b> ${sum.hotMonth==null? "—" : `${m[sum.hotMonth]} (${fmt1(sum.hotVal)} °C)`}</div></div>
+    <div class="item"><span class="badge">❄️</span><div><b>Mês mais fresco:</b> ${sum.coolMonth==null? "—" : `${m[sum.coolMonth]} (${fmt1(sum.coolVal)} °C)`}</div></div>
+  `;
+  $("#summary").innerHTML = html;
+
+  ensureChart();
+  state.chart.data.datasets[0].data = payload.rain.map(v => v == null ? null : Number(v));
+  state.chart.data.datasets[1].data = payload.tmean.map(v => v == null ? null : Number(v));
   state.chart.update();
 }
 
-// ---------- Station selection ----------
-async function loadStationYear(stationId, year){
-  // assets/data/A001/2000.json
-  const url = `${BASE}assets/data/${stationId}/${year}.json`;
-  return await fetchJSON(url);
-}
+async function selectStation(id, fromMap=false) {
+  state.selectedStationId = id;
 
-async function selectStationById(stationId, fromList){
-  const st = state.stations.find(s => stationLabel(s).id === stationId);
-  if (!st) return;
+  // marca ativo na lista
+  renderList();
 
-  state.selectedStation = st;
+  // pan no mapa
+  const s = state.stations.find(x => x.id === id);
+  if (s && state.map) {
+    state.map.panTo([s.lat, s.lon], { animate: true });
+    if (fromMap) state.map.setZoom(Math.max(state.map.getZoom(), 7));
+  }
 
-  // destaque na lista
-  renderStationList(filterStations($("q").value));
+  // carrega ano
+  const year = state.selectedYear;
+  if (!year) return;
 
-  // título
-  const {id, name, uf} = stationLabel(st);
-  $("selTitle").textContent = `${name}${uf ? ` (${uf})` : ""}`;
-  $("selMeta").textContent = `ID ${id} • ${fmt1(safeNum(st.lat ?? st.latitude))} , ${fmt1(safeNum(st.lon ?? st.lng ?? st.longitude))}`;
-
-  if (fromList) focusOnStation(st);
-
-  // carrega ano atual
-  if (!state.selectedYear) return;
-
-  try{
-    const raw = await loadStationYear(id, state.selectedYear);
-    const monthly = decodeMonthly(raw);
-    state.lastMonthly = monthly;
-
-    const stats = annualStats(monthly);
-    $("cTmin").textContent = stats.tmin==null ? "—" : fmtC(stats.tmin);
-    $("cTmean").textContent = stats.tmean==null ? "—" : fmtC(stats.tmean);
-    $("cTmax").textContent = stats.tmax==null ? "—" : fmtC(stats.tmax);
-    $("cRain").textContent = stats.prTot==null ? "—" : fmtMM(stats.prTot);
-
-    const mn = monthNames();
-    $("sum1").innerHTML = `📍 <b>${id}</b> • <b>${state.selectedYear}</b>`;
-    $("sum2").innerHTML = (stats.wet.idx==null)
-      ? `🌧️ Mês mais chuvoso: —`
-      : `🌧️ Mês mais chuvoso: <b>${mn[stats.wet.idx]}</b> (${fmtMM(stats.wet.val)})`;
-    $("sum3").innerHTML = (stats.dry.idx==null)
-      ? `🌵 Mês mais seco: —`
-      : `🌵 Mês mais seco: <b>${mn[stats.dry.idx]}</b> (${fmtMM(stats.dry.val)})`;
-
-    updateChart(monthly);
-
-  }catch(err){
-    // se não existir arquivo daquele ano pra estação, não quebra o app
-    $("cTmin").textContent = "—";
-    $("cTmean").textContent = "—";
-    $("cTmax").textContent = "—";
-    $("cRain").textContent = "—";
-    $("sum1").textContent = `Sem dados para ${id} em ${state.selectedYear}`;
-    $("sum2").textContent = "—";
-    $("sum3").textContent = "—";
-    updateChart({pr:new Array(12).fill(null), tmean:new Array(12).fill(null), tmin:new Array(12).fill(null), tmax:new Array(12).fill(null)});
-    console.warn(err);
+  try {
+    setStatus(`Carregando ${id}/${year}…`);
+    const payload = await loadStationYear(id, year);
+    applyYearToUI(id, year, payload);
+    setStatus("Pronto ✅");
+  } catch (e) {
+    console.error(e);
+    setStatus("Erro ao carregar dados");
+    $("#summary").innerHTML = `<div class="muted">Não encontrei <b>${escapeHTML(id)}/${escapeHTML(String(year))}</b> em <code>assets/data/${escapeHTML(id)}/${escapeHTML(String(year))}.json</code>.</div>`;
   }
 }
 
-// ---------- Export ----------
-function exportPNG(){
-  if (!state.chart) return;
-  const a = document.createElement("a");
-  a.download = `climograma_${(state.selectedStation?stationLabel(state.selectedStation).id:"SEM_ESTACAO")}_${state.selectedYear||"ANO"}.png`;
-  a.href = state.chart.toBase64Image("image/png", 1);
-  a.click();
-}
-
-function exportCSV(){
-  if (!state.selectedStation || !state.lastMonthly) return;
-
-  const {id, name, uf} = stationLabel(state.selectedStation);
-  const mn = monthNames();
-
-  const rows = [];
-  rows.push(["id","nome","uf","ano","mes","prec_mm","tmed_c","tmin_c","tmax_c"].join(","));
-
-  for (let i=0;i<12;i++){
-    const pr = state.lastMonthly.pr[i];
-    const tm = state.lastMonthly.tmean[i];
-    const tn = state.lastMonthly.tmin[i];
-    const tx = state.lastMonthly.tmax[i];
-    rows.push([
-      id,
-      `"${String(name).replaceAll('"','""')}"`,
-      uf,
-      state.selectedYear,
-      mn[i],
-      pr==null?"":pr,
-      tm==null?"":tm,
-      tn==null?"":tn,
-      tx==null?"":tx
-    ].join(","));
-  }
-
-  const blob = new Blob([rows.join("\n")], { type:"text/csv;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `climograma_${id}_${state.selectedYear}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-// ---------- Init ----------
-async function main(){
-  setRightEmpty();
-
-  // carrega índices
-  // aceita tanto array quanto objeto
-  const stRaw = await fetchJSON(`${BASE}assets/stations.json`);
-  const yrRaw = await fetchJSON(`${BASE}assets/years.json`);
-
-  state.stations = Array.isArray(stRaw) ? stRaw : (stRaw.stations || stRaw.data || []);
-  state.years = Array.isArray(yrRaw) ? yrRaw : (yrRaw.years || yrRaw.data || []);
-
-  // garante ordenação numérica
-  state.years = state.years.map(Number).filter(Number.isFinite).sort((a,b)=>a-b);
-
-  renderYears();
-  renderStationList(state.stations);
-
-  initMap();
-  initChart();
-
-  // eventos
-  $("q").addEventListener("input", () => {
-    renderStationList(filterStations($("q").value));
+function setupEvents() {
+  $("#q").addEventListener("input", () => {
+    state.filtered = filterStations($("#q").value);
+    renderCount();
+    renderList();
+    renderMarkers();
   });
 
-  $("yearSel").addEventListener("change", async (e) => {
-    state.selectedYear = Number(e.target.value);
-    if (state.selectedStation) {
-      await selectStationById(stationLabel(state.selectedStation).id, false);
+  $("#clearQ").addEventListener("click", () => {
+    $("#q").value = "";
+    state.filtered = filterStations("");
+    renderCount();
+    renderList();
+    renderMarkers();
+  });
+
+  $("#yearSel").addEventListener("change", async () => {
+    state.selectedYear = Number($("#yearSel").value);
+    if (state.selectedStationId) {
+      await selectStation(state.selectedStationId);
     }
   });
 
-  $("btnPng").addEventListener("click", exportPNG);
-  $("btnCsv").addEventListener("click", exportCSV);
-  $("btnAll").addEventListener("click", showAllStations);
-  $("btnFocus").addEventListener("click", () => { if (state.selectedStation) focusOnStation(state.selectedStation); });
-  $("btnResetZoom").addEventListener("click", () => { if (state.chart) state.chart.resetZoom(); });
+  $("#btnAll").addEventListener("click", () => {
+    $("#q").value = "";
+    state.filtered = [...state.stations];
+    renderCount();
+    renderList();
+    renderMarkers();
+    focusToFiltered();
+  });
 
-  // seleção inicial: nada (mais seguro)
+  $("#btnFocus").addEventListener("click", () => {
+    focusToFiltered();
+  });
+
+  // clique na lista
+  $("#list").addEventListener("click", (ev) => {
+    const card = ev.target.closest(".station");
+    if (!card) return;
+    const id = card.getAttribute("data-id");
+    if (id) selectStation(id, false);
+  });
+
+  $("#btnResetZoom").addEventListener("click", () => {
+    if (state.chart?.resetZoom) state.chart.resetZoom();
+  });
+
+  $("#btnPNG").addEventListener("click", () => {
+    if (!state.chart) return;
+    const a = document.createElement("a");
+    const id = state.selectedStationId || "station";
+    const year = state.selectedYear || "year";
+    a.download = `climograma_${id}_${year}.png`;
+    a.href = state.chart.toBase64Image("image/png", 1);
+    a.click();
+  });
+
+  $("#btnCSV").addEventListener("click", async () => {
+    const id = state.selectedStationId;
+    const year = state.selectedYear;
+    if (!id || !year) return;
+
+    try {
+      const payload = await loadStationYear(id, year);
+      const labels = monthLabels();
+
+      // CSV mensal
+      const rows = [["station_id","year","month","precip_mm","tmean_c"]];
+      for (let i=0;i<12;i++){
+        rows.push([
+          id,
+          String(year),
+          labels[i],
+          payload.rain[i] == null ? "" : String(payload.rain[i]),
+          payload.tmean[i] == null ? "" : String(payload.tmean[i]),
+        ]);
+      }
+      const csv = rows.map(r => r.map(cell => {
+        const v = String(cell ?? "");
+        // escape simples
+        if (v.includes(",") || v.includes('"') || v.includes("\n")) {
+          return `"${v.replaceAll('"','""')}"`;
+        }
+        return v;
+      }).join(",")).join("\n");
+
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `climograma_${id}_${year}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error(e);
+      alert("Não consegui gerar CSV (dados do ano não encontrados).");
+    }
+  });
 }
 
-main().catch(err => {
-  console.error(err);
-  alert("Erro ao iniciar o app. Abra o console (F12) e veja os detalhes.");
-});
+// ====== INIT ======
+async function main() {
+  try {
+    setStatus("Carregando estações…");
+
+    const stRaw = await loadJSON("assets/stations.json");
+    const yrRaw = await loadJSON("assets/years.json");
+
+    state.stations = parseStations(stRaw);
+    state.years = parseYears(yrRaw);
+
+    if (!state.stations.length) {
+      throw new Error("stations.json carregou, mas não encontrei estações válidas (id/lat/lon).");
+    }
+    if (!state.years.length) {
+      // fallback: tenta inferir por pasta? (não dá em pages). então usa um range mínimo:
+      state.years = [2023, 2024];
+    }
+
+    buildYearOptions();
+
+    state.filtered = [...state.stations];
+    renderCount();
+    renderList();
+
+    ensureMap();
+    renderMarkers();
+    focusToFiltered();
+
+    ensureChart();
+    clearRightPanel();
+
+    setStatus("Pronto ✅");
+
+  } catch (e) {
+    console.error(e);
+    setStatus("Erro");
+    $("#summary").innerHTML = `
+      <div class="muted">
+        Erro ao iniciar.<br><br>
+        <b>Checagens rápidas:</b><br>
+        1) <code>${escapeHTML(BASE)}assets/stations.json</code><br>
+        2) <code>${escapeHTML(BASE)}assets/years.json</code><br><br>
+        <b>Detalhe:</b> ${escapeHTML(e.message)}
+      </div>
+    `;
+  }
+}
+
+setupEvents();
+main();
