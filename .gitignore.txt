@@ -1,10 +1,14 @@
-# Dados brutos (NUNCA publicar)
-raw/**
+# Dados brutos (muito grandes)
+raw/
+tools/
 
-# Cache do Python
+# Python cache
 __pycache__/
 *.pyc
 
-# Arquivos do sistema
-.DS_Store
+# Logs
+*.log
+
+# Windows cruft
 Thumbs.db
+.DS_Store
