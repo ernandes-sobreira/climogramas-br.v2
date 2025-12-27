@@ -1,123 +1,145 @@
 <!doctype html>
 <html lang="pt-br">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Climogramas do Brasil • Transforma-Ação Climática</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Transforma-Ação Climática — Climogramas do Brasil</title>
 
-  <meta name="theme-color" content="#0b4b5a"/>
-  <link rel="stylesheet" href="styles.css"/>
+  <meta name="theme-color" content="#0b6b63" />
+  <link rel="stylesheet" href="./styles.css" />
 
   <!-- Leaflet -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  />
 
-  <!-- MarkerCluster (para desempenho com muitas estações) -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
-  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
-
-  <!-- Chart.js + Zoom -->
+  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+  <!-- Zoom plugin -->
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.umd.min.js"></script>
 </head>
 
 <body>
   <header class="topbar">
     <div class="brand">
-      <div class="logoDot" aria-hidden="true"></div>
-      <div>
-        <h1>Transforma-Ação Climática</h1>
-        <p>Climogramas do Brasil • Elaborado por <b>Ernandes Sobreira</b> • Dados do INMET</p>
+      <div class="dot"></div>
+      <div class="brand-text">
+        <div class="brand-title">Transforma-Ação Climática</div>
+        <div class="brand-sub">Climogramas do Brasil • Elaborado por <b>Ernandes Sobreira</b> • Dados do INMET</div>
       </div>
     </div>
 
-    <div class="actions">
-      <div class="control">
-        <input id="q" type="search" placeholder="Buscar estação (nome, UF, id)..." autocomplete="off"/>
+    <div class="controls">
+      <div class="search">
+        <input id="q" type="search" placeholder="Buscar estação (nome, UF, id)..." autocomplete="off" />
+        <button id="clearQ" class="iconBtn" title="Limpar">✕</button>
       </div>
 
-      <div class="control">
-        <select id="yearSel" title="Ano"></select>
-      </div>
+      <select id="yearSel" class="select" title="Ano"></select>
 
-      <button class="btn" id="btnPng">Exportar PNG</button>
-      <button class="btn" id="btnCsv">Exportar CSV</button>
-      <button class="btn ghost" id="btnAll">Mostrar todas</button>
+      <button id="btnPNG" class="btn primary">Exportar PNG</button>
+      <button id="btnCSV" class="btn">Exportar CSV</button>
+      <button id="btnAll" class="btn ghost">Mostrar todas</button>
     </div>
   </header>
 
   <main class="layout">
     <!-- LEFT -->
-    <section class="panel left">
+    <aside class="panel left">
       <div class="panelHead">
         <div>
-          <h2>Estações</h2>
-          <div class="sub" id="countLbl">—</div>
+          <div class="panelTitle">Estações</div>
+          <div id="countInfo" class="panelHint">—</div>
         </div>
-        <button class="btn ghost small" id="btnFocus">Focar</button>
+        <button id="btnFocus" class="btn tiny">Focar</button>
       </div>
-      <div class="list" id="stationList"></div>
-      <div class="hint">
-        <div>• Clique numa estação (lista) ou no ponto do mapa.</div>
-        <div>• Use o zoom no gráfico para ver valores (scroll/pinch).</div>
-        <div>• Duplo-clique no gráfico para resetar o zoom.</div>
+
+      <div class="panelBody">
+        <div class="tips">
+          <ul>
+            <li>Clique numa estação (lista) ou no ponto do mapa.</li>
+            <li>Use zoom no gráfico para ver detalhes (scroll/pinch).</li>
+            <li>Duplo-clique no gráfico para resetar o zoom.</li>
+          </ul>
+        </div>
+
+        <div id="list" class="stationList" aria-label="Lista de estações"></div>
       </div>
-    </section>
+    </aside>
 
     <!-- CENTER -->
     <section class="panel center">
-      <div id="map"></div>
+      <div class="panelHead">
+        <div class="panelTitle">Mapa</div>
+        <div class="panelActions">
+          <span id="status" class="status">Carregando…</span>
+        </div>
+      </div>
+      <div class="panelBody mapWrap">
+        <div id="map"></div>
+      </div>
     </section>
 
     <!-- RIGHT -->
-    <section class="panel right">
+    <aside class="panel right">
       <div class="panelHead">
         <div>
-          <h2 id="selTitle">Selecione uma estação</h2>
-          <div class="sub" id="selMeta">—</div>
+          <div id="stationTitle" class="panelTitle">Selecione uma estação</div>
+          <div id="stationMeta" class="panelHint">—</div>
         </div>
-        <div class="mini">
-          <button class="btn ghost small" id="btnResetZoom">Reset zoom</button>
-        </div>
+        <button id="btnResetZoom" class="btn tiny">Reset zoom</button>
       </div>
 
-      <div class="cards">
-        <div class="card">
-          <span>T min (ano)</span>
-          <strong id="cTmin">—</strong>
+      <div class="panelBody">
+        <div class="cards">
+          <div class="card">
+            <div class="cardLabel">T min (ano)</div>
+            <div id="kTmin" class="cardValue">—</div>
+          </div>
+          <div class="card">
+            <div class="cardLabel">T méd (ano)</div>
+            <div id="kTmean" class="cardValue">—</div>
+          </div>
+          <div class="card">
+            <div class="cardLabel">T máx (ano)</div>
+            <div id="kTmax" class="cardValue">—</div>
+          </div>
+          <div class="card">
+            <div class="cardLabel">Chuva total</div>
+            <div id="kRain" class="cardValue">—</div>
+          </div>
         </div>
-        <div class="card">
-          <span>T méd (ano)</span>
-          <strong id="cTmean">—</strong>
-        </div>
-        <div class="card">
-          <span>T máx (ano)</span>
-          <strong id="cTmax">—</strong>
-        </div>
-        <div class="card">
-          <span>Chuva total</span>
-          <strong id="cRain">—</strong>
-        </div>
-      </div>
 
-      <div class="summary" id="summaryBox">
-        <h3>Resumo climático</h3>
-        <div class="sumLine" id="sum1">—</div>
-        <div class="sumLine" id="sum2">—</div>
-        <div class="sumLine" id="sum3">—</div>
-      </div>
+        <div class="box">
+          <div class="boxTitle">Resumo climático</div>
+          <div id="summary" class="summary">
+            <div class="muted">—</div>
+          </div>
+        </div>
 
-      <div class="chartWrap">
-        <canvas id="chart"></canvas>
+        <div class="chartBox">
+          <canvas id="chart" height="240"></canvas>
+          <div class="chartHint">Dica: no gráfico, use o zoom e passe o mouse para ver valores (tooltips).</div>
+        </div>
       </div>
-
-      <div class="footnote">
-        Dica: no gráfico, use zoom e passe o mouse para ver valores (tooltips).
-      </div>
-    </section>
+    </aside>
   </main>
 
-  <script src="app.js"></script>
+  <footer class="footer">
+    <span>© Transforma-Ação Climática • INMET</span>
+    <span class="muted">GitHub Pages • app 100% estático</span>
+  </footer>
+
+  <!-- Leaflet JS -->
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
+
+  <script src="./app.js"></script>
 </body>
 </html>
