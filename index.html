@@ -2,75 +2,122 @@
 <html lang="pt-br">
 <head>
   <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Climogramas do Brasil — INMET</title>
-  <link rel="icon" type="image/png" href="assets/icon.png">
-  <meta name="theme-color" content="#2563eb"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Climogramas do Brasil • Transforma-Ação Climática</title>
 
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
-
+  <meta name="theme-color" content="#0b4b5a"/>
   <link rel="stylesheet" href="styles.css"/>
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+
+  <!-- MarkerCluster (para desempenho com muitas estações) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
+  <!-- Chart.js + Zoom -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
 </head>
+
 <body>
   <header class="topbar">
     <div class="brand">
-      <div class="dot"></div>
+      <div class="logoDot" aria-hidden="true"></div>
       <div>
-        <div class="title">Transforma-Ação Climática</div>
-        <div class="subtitle">
-          Climogramas do Brasil • Elaborado por <b>Ernandes Sobreira</b> • Dados do INMET
-        </div>
+        <h1>Transforma-Ação Climática</h1>
+        <p>Climogramas do Brasil • Elaborado por <b>Ernandes Sobreira</b> • Dados do INMET</p>
       </div>
     </div>
 
-    <div class="controls">
-      <input id="q" class="input" placeholder="Buscar estação (nome, UF, id)..." autocomplete="off"/>
-      <select id="year" class="select"></select>
-      <button id="btnExportPNG" class="btn">Exportar PNG</button>
-      <button id="btnExportCSV" class="btn ghost">Exportar CSV</button>
-      <button id="btnAll" class="btn ghost small" title="Limpar busca e mostrar todas">Mostrar todas</button>
+    <div class="actions">
+      <div class="control">
+        <input id="q" type="search" placeholder="Buscar estação (nome, UF, id)..." autocomplete="off"/>
+      </div>
+
+      <div class="control">
+        <select id="yearSel" title="Ano"></select>
+      </div>
+
+      <button class="btn" id="btnPng">Exportar PNG</button>
+      <button class="btn" id="btnCsv">Exportar CSV</button>
+      <button class="btn ghost" id="btnAll">Mostrar todas</button>
     </div>
   </header>
 
-  <main class="grid">
+  <main class="layout">
+    <!-- LEFT -->
     <section class="panel left">
       <div class="panelHead">
-        <div class="h">Estações</div>
-        <div class="headRight">
-          <div class="note" id="countNote">—</div>
-          <button id="btnStations" class="btn ghost small" type="button">Abrir</button>
+        <div>
+          <h2>Estações</h2>
+          <div class="sub" id="countLbl">—</div>
         </div>
+        <button class="btn ghost small" id="btnFocus">Focar</button>
       </div>
-      <div id="list" class="list"></div>
-      <div class="legend">
-        <div class="lg"></div>
-        <div class="legendText">
-          Clique numa estação (lista) ou no ponto do mapa.<br/>
-          A régua anual mostra <b>mínimo</b>, <b>média</b> e <b>máximo</b> do ano.
-        </div>
+      <div class="list" id="stationList"></div>
+      <div class="hint">
+        <div>• Clique numa estação (lista) ou no ponto do mapa.</div>
+        <div>• Use o zoom no gráfico para ver valores (scroll/pinch).</div>
+        <div>• Duplo-clique no gráfico para resetar o zoom.</div>
       </div>
     </section>
 
-    <section class="panel mid">
-      <div id="map" class="map"></div>
+    <!-- CENTER -->
+    <section class="panel center">
+      <div id="map"></div>
     </section>
 
+    <!-- RIGHT -->
     <section class="panel right">
       <div class="panelHead">
-        <div class="h" id="stationTitle">Selecione uma estação</div>
-        <div class="note" id="stationMeta">—</div>
+        <div>
+          <h2 id="selTitle">Selecione uma estação</h2>
+          <div class="sub" id="selMeta">—</div>
+        </div>
+        <div class="mini">
+          <button class="btn ghost small" id="btnResetZoom">Reset zoom</button>
+        </div>
       </div>
-      <div class="cards" id="cards"></div>
-      <div id="insights" class="insights"></div>
-      <div class="chartWrap"><div id="chart" class="chart"></div></div>
-      <div class="footerHint" id="footerHint">
-        Dica: no gráfico, use o zoom e passe o mouse para ver valores (tooltips).
+
+      <div class="cards">
+        <div class="card">
+          <span>T min (ano)</span>
+          <strong id="cTmin">—</strong>
+        </div>
+        <div class="card">
+          <span>T méd (ano)</span>
+          <strong id="cTmean">—</strong>
+        </div>
+        <div class="card">
+          <span>T máx (ano)</span>
+          <strong id="cTmax">—</strong>
+        </div>
+        <div class="card">
+          <span>Chuva total</span>
+          <strong id="cRain">—</strong>
+        </div>
+      </div>
+
+      <div class="summary" id="summaryBox">
+        <h3>Resumo climático</h3>
+        <div class="sumLine" id="sum1">—</div>
+        <div class="sumLine" id="sum2">—</div>
+        <div class="sumLine" id="sum3">—</div>
+      </div>
+
+      <div class="chartWrap">
+        <canvas id="chart"></canvas>
+      </div>
+
+      <div class="footnote">
+        Dica: no gráfico, use zoom e passe o mouse para ver valores (tooltips).
       </div>
     </section>
   </main>
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
