@@ -6,8 +6,6 @@
   --muted: rgba(15,23,42,.62);
 
   --brand:#0b6b63;
-  --brand2:#1aa7a1;
-
   --shadow: 0 10px 30px rgba(15,23,42,.10);
   --r:16px;
 }
@@ -16,7 +14,7 @@
 html,body{ height:100%; }
 body{
   margin:0;
-  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
   color:var(--txt);
   background: linear-gradient(180deg, #eef5ff 0%, var(--bg) 45%, #f7fbff 100%);
 }
@@ -27,7 +25,7 @@ body{
   display:flex; align-items:center; justify-content:space-between;
   gap:16px;
   padding:14px 18px;
-  background: rgba(255,255,255,.85);
+  background: rgba(255,255,255,.88);
   backdrop-filter: blur(10px);
   border-bottom:1px solid var(--stroke);
 }
@@ -38,7 +36,7 @@ body{
   background: radial-gradient(circle at 30% 30%, #7ff3dc, var(--brand));
   box-shadow: 0 0 0 3px rgba(11,107,99,.12);
 }
-.brand-title{ font-weight:800; letter-spacing:.2px; }
+.brand-title{ font-weight:900; letter-spacing:.2px; }
 .brand-sub{ font-size:12px; color:var(--muted); margin-top:2px; }
 
 /* controls */
@@ -56,11 +54,7 @@ body{
   border:none; outline:none;
   font-size:14px;
 }
-.iconBtn{
-  border:none; background:transparent; cursor:pointer;
-  color:var(--muted);
-  font-size:14px;
-}
+.iconBtn{ border:none; background:transparent; cursor:pointer; color:var(--muted); font-size:14px; }
 .select{
   border:1px solid var(--stroke);
   background:#fff;
@@ -77,7 +71,7 @@ body{
   padding:9px 12px;
   border-radius:999px;
   cursor:pointer;
-  font-weight:700;
+  font-weight:800;
   box-shadow: 0 6px 18px rgba(15,23,42,.06);
 }
 .btn:hover{ transform: translateY(-1px); }
@@ -87,21 +81,16 @@ body{
   background: linear-gradient(180deg, #2d7df6, #1f63d9);
   color:#fff;
 }
-.btn.ghost{
-  background: rgba(255,255,255,.6);
-}
-.btn.tiny{
-  padding:6px 10px;
-  font-size:12px;
-}
+.btn.ghost{ background: rgba(255,255,255,.6); }
+.btn.tiny{ padding:6px 10px; font-size:12px; }
 
 /* layout */
 .layout{
   display:grid;
-  grid-template-columns: 320px 1fr 420px;
+  grid-template-columns: 320px 1fr 460px;
   gap:14px;
   padding:14px;
-  max-width: 1500px;
+  max-width: 1560px;
   margin: 0 auto;
 }
 
@@ -223,7 +212,7 @@ body{
 }
 
 .footer{
-  max-width:1500px;
+  max-width:1560px;
   margin: 6px auto 18px;
   padding: 0 14px;
   display:flex;
