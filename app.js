@@ -1,716 +1,620 @@
-const $ = (sel) => document.querySelector(sel);
+/* Transforma-Ação Climática — Climogramas do Brasil (INMET)
+   Front-end leve: Leaflet + MarkerCluster + Chart.js (zoom)
+*/
+const $ = (id) => document.getElementById(id);
 
-const state = {
-  stations: [],
-  filtered: [],
-  years: [],
-  selectedYear: null,
-  selectedStationId: null,
-  map: null,
-  cluster: null,
-  markerById: new Map(),
-  chart: null,
-  cache: new Map(),      // `${id}-${year}` => parsed
-  yearExistCache: new Map(), // url => boolean
-  yearsByStation: new Map(), // id => years[]
-};
+const MONTHS = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
 
-function computeBase() {
-  const p = window.location.pathname;
-  return p.endsWith("/") ? p : p.substring(0, p.lastIndexOf("/") + 1);
-}
-const BASE = computeBase();
+let stations = [];
+let yearsAll = [];
+let selectedStation = null;
+let stationYears = [];
+let selectedYear = null;
 
-function setStatus(msg) { $("#status").textContent = msg; }
-function setDebug(msg) { $("#debug").textContent = msg || ""; }
+let map, cluster;
+let markersById = new Map();
+let chart = null;
 
-function escapeHTML(str) {
-  return String(str)
-    .replaceAll("&","&amp;").replaceAll("<","&lt;")
-    .replaceAll(">","&gt;")
-    .replaceAll('"',"&quot;")
-    .replaceAll("'","&#039;");
-}
-function fmt1(x){ if(x==null||Number.isNaN(x)) return "—"; return (Math.round(x*10)/10).toFixed(1); }
-function coerceNumber(v){
-  if(v==null) return null;
-  const s = String(v).trim();
-  if(!s) return null;
-  const n = parseFloat(s.replace(",", "."));
-  return Number.isFinite(n) ? n : null;
-}
-function clamp(n,a,b){ return Math.max(a, Math.min(b,n)); }
-
-async function fetchJSON(url) {
-  const res = await fetch(url, { cache: "no-cache" });
-  if (!res.ok) throw new Error(`HTTP ${res.status} em ${url}`);
-  return await res.json();
-}
-async function loadJSON(path) { return fetchJSON(BASE + path.replace(/^\.\//,"")); }
-
-async function headExists(path) {
-  const url = BASE + path.replace(/^\.\//,"");
-  if (state.yearExistCache.has(url)) return state.yearExistCache.get(url);
-
-  try {
-    const res = await fetch(url, { method: "HEAD", cache: "no-cache" });
-    const ok = res.ok;
-    state.yearExistCache.set(url, ok);
-    return ok;
-  } catch {
-    state.yearExistCache.set(url, false);
-    return false;
-  }
+function setStatus(text, ok=true){
+  const pill = $("statusPill");
+  pill.textContent = text;
+  pill.style.background = ok ? "rgba(11,111,117,.12)" : "rgba(220,38,38,.12)";
+  pill.style.borderColor = ok ? "rgba(11,111,117,.18)" : "rgba(220,38,38,.18)";
+  pill.style.color = ok ? "#0b6f75" : "#b91c1c";
 }
 
-function monthLabels(){ return ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"]; }
-
-function normalizeStation(s) {
-  const id = (s.id || s.ID || s.codigo || s.station_id || s.wmo || s.WMO || "").toString().trim();
-  const name = (s.nome || s.name || s.estacao || s.ESTACAO || s.station || "").toString().trim();
-  const uf = (s.uf || s.UF || s.estado || s.state || "").toString().trim();
-  const latRaw = (s.lat ?? s.latitude ?? s.LATITUDE ?? s.Latitude ?? s.y);
-  const lonRaw = (s.lon ?? s.lng ?? s.longitude ?? s.LONGITUDE ?? s.Longitude ?? s.x);
-  const lat = parseFloat(String(latRaw).replace(",", "."));
-  const lon = parseFloat(String(lonRaw).replace(",", "."));
-  return { ...s, id, name, uf, lat, lon };
-}
-function parseStations(stRaw) {
-  let arr = [];
-  if (Array.isArray(stRaw)) arr = stRaw;
-  else if (stRaw?.stations && Array.isArray(stRaw.stations)) arr = stRaw.stations;
-  else if (stRaw?.data && Array.isArray(stRaw.data)) arr = stRaw.data;
-  else if (stRaw && typeof stRaw === "object") arr = Object.entries(stRaw).map(([id, obj]) => ({ id, ...(obj||{}) }));
-
-  const norm = arr.map(normalizeStation).filter(s => s.id && Number.isFinite(s.lat) && Number.isFinite(s.lon));
-  norm.sort((a,b) => (a.uf+a.name).localeCompare(b.uf+b.name, "pt-BR"));
-  return norm;
+function norm(s){
+  return (s ?? "")
+    .toString()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+    .toLowerCase().trim();
 }
 
-function buildYears() {
-  // ✅ SEMPRE 2000..2024 (nunca depende do years.json)
-  const out = [];
-  for (let y=2000; y<=2024; y++) out.push(y);
-  return out;
+function fmt(n, digits=1){
+  if(n === null || n === undefined || Number.isNaN(n)) return "—";
+  return Number(n).toFixed(digits);
 }
 
-function renderYears() {
-  const sel = $("#yearSel");
+function fmtInt(n){
+  if(n === null || n === undefined || Number.isNaN(n)) return "—";
+  return String(Math.round(Number(n)));
+}
+
+async function fetchJson(path){
+  const r = await fetch(path, {cache:"no-store"});
+  if(!r.ok) throw new Error(`HTTP ${r.status} em ${path}`);
+  return await r.json();
+}
+
+/* -------- Load base files -------- */
+async function loadBase(){
+  setStatus("Carregando estações…");
+  const st = await fetchJson("assets/stations.json");
+
+  // aceita array ou {stations:[]}
+  stations = Array.isArray(st) ? st : (st.stations || []);
+  if(!stations.length) throw new Error("stations.json vazio/inválido.");
+
+  setStatus("Carregando anos…");
+  const ys = await fetchJson("assets/years.json");
+  yearsAll = Array.isArray(ys) ? ys : (ys.years || []);
+  yearsAll = yearsAll.map(Number).filter(Number.isFinite).sort((a,b)=>a-b);
+
+  // UI anos (depois trocamos para anos da estação quando selecionar)
+  fillYearSelect(yearsAll);
+
+  $("stationCount").textContent = stations.length;
+
+  renderList(stations);
+  initMap();
+  setStatus("Pronto ✅");
+}
+
+function fillYearSelect(yrs){
+  const sel = $("yearSelect");
   sel.innerHTML = "";
-  state.years.forEach(y => {
+  yrs.forEach(y=>{
     const opt = document.createElement("option");
     opt.value = String(y);
     opt.textContent = String(y);
     sel.appendChild(opt);
   });
-  state.selectedYear = 2024; // padrão
-  sel.value = "2024";
+  // default: último ano
+  if(yrs.length){
+    sel.value = String(yrs[yrs.length-1]);
+    selectedYear = Number(sel.value);
+  }
 }
 
-function filterStations(q) {
-  const t = (q || "").trim().toLowerCase();
-  if (!t) return [...state.stations];
-  return state.stations.filter(s => (`${s.id} ${s.name} ${s.uf}`).toLowerCase().includes(t));
+/* -------- Stations list -------- */
+function stationLabel(s){
+  const id = s.id ?? s.ID ?? s.codigo ?? s.codigo_wmo ?? s.wmo ?? s.station_id;
+  const name = s.name ?? s.NOME ?? s.estacao ?? s.station ?? "";
+  const uf = s.uf ?? s.UF ?? "";
+  return {id, name, uf};
 }
 
-function stationCardHTML(s, active=false) {
-  const title = `${s.name || "SEM NOME"} (${s.uf || "—"})`;
-  return `
-    <div class="station ${active ? "active":""}" data-id="${escapeHTML(s.id)}">
-      <div class="stationName">${escapeHTML(title)}</div>
-      <div class="stationMeta">
-        <span>ID ${escapeHTML(s.id)}</span>
-        <span>${escapeHTML(fmt1(s.lat))}, ${escapeHTML(fmt1(s.lon))}</span>
+function stationLatLng(s){
+  const lat = Number(s.lat ?? s.latitude ?? s.LATITUDE);
+  const lon = Number(s.lon ?? s.lng ?? s.longitude ?? s.LONGITUDE);
+  return [lat, lon];
+}
+
+function renderList(arr){
+  const box = $("stationList");
+  box.innerHTML = "";
+
+  arr.forEach(s=>{
+    const {id,name,uf} = stationLabel(s);
+    const [lat, lon] = stationLatLng(s);
+
+    const div = document.createElement("div");
+    div.className = "item";
+    div.dataset.id = id;
+
+    div.innerHTML = `
+      <div class="name">${(name||"(sem nome)")}${uf?` <span style="opacity:.9">(${uf})</span>`:""}</div>
+      <div class="meta">
+        <span>ID ${id}</span>
+        <span>${Number.isFinite(lat)&&Number.isFinite(lon) ? `${lat.toFixed(1)}, ${lon.toFixed(1)}` : ""}</span>
       </div>
-    </div>
-  `;
+    `;
+
+    div.addEventListener("click", ()=> selectStationById(id, true));
+    box.appendChild(div);
+  });
 }
 
-function renderList() {
-  $("#list").innerHTML = state.filtered.map(s => stationCardHTML(s, s.id === state.selectedStationId)).join("");
-  $("#countInfo").textContent = `${state.filtered.length} estações`;
+function setActiveListItem(id){
+  document.querySelectorAll(".item").forEach(el=>{
+    el.classList.toggle("active", el.dataset.id === String(id));
+  });
 }
 
-function ensureMap() {
-  if (state.map) return;
-
-  state.map = L.map("map", { zoomControl: true, preferCanvas: true }).setView([-14.5, -53.0], 4);
+/* -------- Map -------- */
+function initMap(){
+  map = L.map("map", {zoomControl:true}).setView([-14.2, -52.6], 4);
 
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 18,
-    attribution: '&copy; OpenStreetMap',
-  }).addTo(state.map);
+    attribution: '&copy; OpenStreetMap'
+  }).addTo(map);
 
-  state.cluster = L.markerClusterGroup({
-    showCoverageOnHover: false,
-    maxClusterRadius: 52,
-    spiderfyOnMaxZoom: true,
+  cluster = L.markerClusterGroup({
+    showCoverageOnHover:false,
+    chunkedLoading:true,
+    chunkInterval: 50
   });
 
-  state.map.addLayer(state.cluster);
-}
+  stations.forEach(s=>{
+    const {id,name,uf} = stationLabel(s);
+    const [lat, lon] = stationLatLng(s);
+    if(!Number.isFinite(lat) || !Number.isFinite(lon)) return;
 
-function renderMarkers() {
-  ensureMap();
-  state.cluster.clearLayers();
-  state.markerById.clear();
+    const m = L.marker([lat, lon], {title: `${name} (${uf})`});
+    m.on("click", ()=> selectStationById(id, false));
+    m.bindPopup(`<b>${name}</b>${uf?` (${uf})`:""}<br/>ID ${id}`);
 
-  state.filtered.forEach(s => {
-    const marker = L.marker([s.lat, s.lon], { title: `${s.name} (${s.uf})` });
-    marker.on("click", () => selectStation(s.id, true));
-    marker.bindTooltip(`${escapeHTML(s.name)} (${escapeHTML(s.uf)})<br><b>${escapeHTML(s.id)}</b>`, { sticky: true });
-    state.cluster.addLayer(marker);
-    state.markerById.set(s.id, marker);
+    markersById.set(String(id), m);
+    cluster.addLayer(m);
   });
+
+  map.addLayer(cluster);
 }
 
-function focusToFiltered() {
-  ensureMap();
-  const pts = state.filtered.map(s => [s.lat, s.lon]);
-  if (!pts.length) return;
-  state.map.fitBounds(L.latLngBounds(pts).pad(0.12));
+function zoomToStation(id){
+  const m = markersById.get(String(id));
+  if(!m) return;
+  const ll = m.getLatLng();
+  map.setView(ll, 9, {animate:true});
+  m.openPopup();
 }
 
-/* ===================== DADOS: parser robusto (inclui precip INMET) ===================== */
+/* -------- Station selection + load years -------- */
+async function selectStationById(id, fromList){
+  const s = stations.find(x => String(stationLabel(x).id) === String(id));
+  if(!s) return;
 
-function findAny(obj, keys) {
-  for (const k of keys) if (obj && Object.prototype.hasOwnProperty.call(obj, k)) return obj[k];
-  return undefined;
+  selectedStation = s;
+  setActiveListItem(id);
+
+  // zoom no mapa SEMPRE quando selecionar
+  zoomToStation(id);
+
+  // scrola a lista para o item (quando veio de busca/lista)
+  if(fromList){
+    const el = document.querySelector(`.item[data-id="${CSS.escape(String(id))}"]`);
+    el?.scrollIntoView({block:"center", behavior:"smooth"});
+  }
+
+  // Carrega anos disponíveis da estação (varrendo assets/data/<id>/???.json via tentativa inteligente)
+  // Estratégia: usa yearsAll e testa existência com HEAD (leve, mas são muitos). Então:
+  // - para performance: testa apenas anosAll e para no primeiro bloco que achar, e depois amplia.
+  // - se você tiver years_by_station pronto no stations.json, ele usa direto.
+  await loadStationYearsAndData();
 }
 
-function extractMonthlyQuad(raw) {
-  const out = {
-    rain: new Array(12).fill(null),
-    tmean: new Array(12).fill(null),
-    tmin: new Array(12).fill(null),
-    tmax: new Array(12).fill(null),
-  };
+async function loadStationYearsAndData(){
+  const {id,name,uf} = stationLabel(selectedStation);
+  $("stationTitle").textContent = `${name || "(sem nome)"}${uf?` (${uf})`:""}`;
+  const [lat, lon] = stationLatLng(selectedStation);
+  $("stationMeta").textContent = `ID ${id} • ${Number.isFinite(lat)&&Number.isFinite(lon) ? `${lat.toFixed(1)}, ${lon.toFixed(1)}` : ""}`;
 
-  // ✅ precip tem muitos nomes no INMET
-  const pickRain = (o) => coerceNumber(findAny(o, [
-    "rain","precip","prec","ppt","prcp","chuva","precipitacao","precipitacao_mm",
-    "PRECIPITACAO","PRECIPITACAO_TOTAL","PRECIPITACAO_TOTAL_MENSAL","PRECIP_TOTAL",
-    "prec_total","prec_total_mm","pr","P","RR","rr","CHUVA_TOTAL"
-  ]));
+  setStatus("Carregando dados…");
 
-  const pickTmean = (o) => coerceNumber(findAny(o, [
-    "tmean","tmed","temp_med","temp_media","temperatura_media","temp",
-    "TEMPERATURA_MEDIA","TEMP_MEDIA","T_MED"
-  ]));
-
-  const pickTmin = (o) => coerceNumber(findAny(o, [
-    "tmin","temp_min","temp_minima","temperatura_minima",
-    "TEMPERATURA_MINIMA","TEMP_MIN","T_MIN"
-  ]));
-
-  const pickTmax = (o) => coerceNumber(findAny(o, [
-    "tmax","temp_max","temp_maxima","temperatura_maxima",
-    "TEMPERATURA_MAXIMA","TEMP_MAX","T_MAX"
-  ]));
-
-  const put = (i, o) => {
-    if (i<0 || i>11 || !o) return;
-    const r  = pickRain(o);
-    const tm = pickTmean(o);
-    const tn = pickTmin(o);
-    const tx = pickTmax(o);
-    if (r  != null) out.rain[i]  = r;
-    if (tm != null) out.tmean[i] = tm;
-    if (tn != null) out.tmin[i]  = tn;
-    if (tx != null) out.tmax[i]  = tx;
-  };
-
-  // monthly array
-  if (Array.isArray(raw?.monthly)) {
-    raw.monthly.forEach(row => {
-      const mi = Number(findAny(row, ["month","mes","m","i","idx"])) || 0;
-      put(clamp(mi-1,0,11), row);
-    });
-    return out;
+  // 1) Se stations.json já tiver uma lista de anos:
+  const yList = selectedStation.years || selectedStation.anos || selectedStation.available_years;
+  if(Array.isArray(yList) && yList.length){
+    stationYears = yList.map(Number).filter(Number.isFinite).sort((a,b)=>a-b);
+  } else {
+    // 2) Caso não tenha: testa anos (mas de forma controlada)
+    stationYears = await probeYearsForStation(id, yearsAll);
   }
 
-  // months array
-  if (Array.isArray(raw?.months)) {
-    raw.months.forEach((row, idx) => put(idx, row));
-    return out;
+  if(!stationYears.length){
+    $("kYears").textContent = "0";
+    setStatus("Sem anos nessa estação", false);
+    clearRightPanel("Sem dados disponíveis para essa estação.");
+    return;
   }
 
-  // series arrays
-  if (raw?.series && typeof raw.series === "object") {
-    const sr = raw.series;
-    const rain  = findAny(sr, ["rain","precip","chuva","prcp","ppt","PRECIPITACAO_TOTAL","RR"]);
-    const tmean = findAny(sr, ["tmean","tmed","temp_med","temp_media","TEMPERATURA_MEDIA"]);
-    const tmin  = findAny(sr, ["tmin","temp_min","temp_minima","TEMPERATURA_MINIMA"]);
-    const tmax  = findAny(sr, ["tmax","temp_max","temp_maxima","TEMPERATURA_MAXIMA"]);
-    if (Array.isArray(rain))  out.rain  = rain.slice(0,12).map(coerceNumber);
-    if (Array.isArray(tmean)) out.tmean = tmean.slice(0,12).map(coerceNumber);
-    if (Array.isArray(tmin))  out.tmin  = tmin.slice(0,12).map(coerceNumber);
-    if (Array.isArray(tmax))  out.tmax  = tmax.slice(0,12).map(coerceNumber);
-    return out;
+  $("kYears").textContent = `${stationYears[0]}–${stationYears[stationYears.length-1]} (${stationYears.length})`;
+
+  // atualiza select de anos para os anos da estação
+  fillYearSelect(stationYears);
+  selectedYear = Number($("yearSelect").value);
+
+  // carrega ano selecionado
+  await loadStationYear(id, selectedYear);
+}
+
+async function probeYearsForStation(id, years){
+  // Testa poucos anos primeiro (rápido) e depois amplia.
+  const exists = [];
+  const quick = [];
+  const last = years[years.length-1];
+  const first = years[0];
+
+  // amostras: fim, meio, início, e últimos 5
+  quick.push(last, last-1, last-2, last-3, last-4);
+  quick.push(Math.round((first+last)/2));
+  quick.push(first, first+1);
+
+  const uniq = [...new Set(quick)].filter(y=>years.includes(y));
+
+  // se nenhum desses existir, aí sim tenta o resto (mas isso é raro)
+  async function hasYear(y){
+    const url = `assets/data/${id}/${y}.json`;
+    try{
+      const r = await fetch(url, {method:"HEAD", cache:"no-store"});
+      return r.ok;
+    }catch{ return false; }
   }
 
-  // objeto 1..12
-  if (raw && typeof raw === "object" && !Array.isArray(raw)) {
-    const keys = Object.keys(raw);
-    const numericKeys = keys.filter(k => /^\d{1,2}$/.test(k));
-    if (numericKeys.length >= 10) {
-      numericKeys.forEach(k => put(clamp(Number(k)-1,0,11), raw[k]));
-      return out;
+  let any = false;
+  for(const y of uniq){
+    if(await hasYear(y)){ any = true; break; }
+  }
+  if(!any){
+    // varre tudo (pode demorar um pouco na primeira seleção)
+    for(const y of years){
+      if(await hasYear(y)) exists.push(y);
+    }
+    return exists;
+  }
+
+  // existe algum — então varre tudo, mas com chunk e “não trava”
+  for(const y of years){
+    // eslint-disable-next-line no-await-in-loop
+    if(await hasYear(y)) exists.push(y);
+  }
+  return exists;
+}
+
+/* -------- Load & render station-year JSON -------- */
+async function loadStationYear(id, year){
+  selectedYear = year;
+  const path = `assets/data/${id}/${year}.json`;
+
+  try{
+    const data = await fetchJson(path);
+    setStatus("Pronto ✅");
+
+    renderRightPanel(data);
+
+  }catch(err){
+    setStatus("Erro ao carregar dados", false);
+    clearRightPanel(`Não encontrei ${id}/${year}.json em assets/data/${id}/`);
+    console.error(err);
+  }
+}
+
+function clearRightPanel(msg){
+  $("kTmin").textContent = "—";
+  $("kTmean").textContent = "—";
+  $("kTmax").textContent = "—";
+  $("kPtotal").textContent = "—";
+  $("kPmean").textContent = "—";
+  $("kPmax").textContent = "—";
+  $("kPmin").textContent = "—";
+
+  $("summary").textContent = msg;
+
+  if(chart){
+    chart.destroy();
+    chart = null;
+  }
+}
+
+function renderRightPanel(d){
+  const annual = d.annual || {};
+  const months = d.months || [];
+
+  // KPIs temp
+  $("kTmin").textContent  = (annual.tmin_c!=null) ? `${fmt(annual.tmin_c,1)} °C` : "—";
+  $("kTmean").textContent = (annual.tmean_c!=null) ? `${fmt(annual.tmean_c,1)} °C` : "—";
+  $("kTmax").textContent  = (annual.tmax_c!=null) ? `${fmt(annual.tmax_c,1)} °C` : "—";
+
+  // KPIs precip
+  $("kPtotal").textContent = (annual.prec_total_mm!=null) ? `${fmt(annual.prec_total_mm,1)} mm` : "—";
+
+  const pVals = months.map(m => m.prec_mm ?? null).filter(v => v!=null);
+  const pMean = (annual.prec_total_mm!=null) ? (annual.prec_total_mm/12) : null;
+  const pMax = pVals.length ? Math.max(...pVals) : null;
+  const pMin = pVals.length ? Math.min(...pVals) : null;
+
+  $("kPmean").textContent = (pMean!=null) ? `${fmt(pMean,1)} mm` : "—";
+  $("kPmax").textContent = (pMax!=null) ? `${fmt(pMax,1)} mm` : "—";
+  $("kPmin").textContent = (pMin!=null) ? `${fmt(pMin,1)} mm` : "—";
+
+  // resumo
+  const hottest = pickExtreme(months, "tmean_c", "max");
+  const coldest = pickExtreme(months, "tmean_c", "min");
+  const wettest = pickExtreme(months, "prec_mm", "max");
+  const driest  = pickExtreme(months, "prec_mm", "min");
+
+  const y = d.year ?? selectedYear;
+  const id = d?.meta?.id ?? d?.id ?? "—";
+
+  $("summary").innerHTML = `
+    <div><b>🧭 ${id} • ${y}</b></div>
+    <div>🌧️ Mês mais chuvoso: ${wettest ? `<b>${MONTHS[wettest.m-1]}</b> (${fmt(wettest.v,1)} mm)` : "—"}</div>
+    <div>🏜️ Mês mais seco: ${driest ? `<b>${MONTHS[driest.m-1]}</b> (${fmt(driest.v,1)} mm)` : "—"}</div>
+    <div>🔥 Mês mais quente: ${hottest ? `<b>${MONTHS[hottest.m-1]}</b> (${fmt(hottest.v,1)} °C)` : "—"}</div>
+    <div>❄️ Mês mais fresco: ${coldest ? `<b>${MONTHS[coldest.m-1]}</b> (${fmt(coldest.v,1)} °C)` : "—"}</div>
+    <div style="margin-top:8px;color:#4e6b75;font-size:12px">
+      Dado mensal: chuva = soma do mês; T = média do mês; Tmin/Tmax = extremos do mês (hora a hora).
+    </div>
+  `;
+
+  // gráfico
+  renderChart(d);
+}
+
+function pickExtreme(months, key, mode){
+  const vals = months
+    .map(m => ({m: m.m, v: m[key]}))
+    .filter(x => x.v != null && Number.isFinite(x.v));
+  if(!vals.length) return null;
+  vals.sort((a,b)=> mode==="max" ? (b.v-a.v) : (a.v-b.v));
+  return vals[0];
+}
+
+function renderChart(d){
+  const months = d.months || [];
+
+  const prec = MONTHS.map((_,i)=> months.find(m=>m.m===i+1)?.prec_mm ?? null);
+  const tmean = MONTHS.map((_,i)=> months.find(m=>m.m===i+1)?.tmean_c ?? null);
+  const tmin  = MONTHS.map((_,i)=> months.find(m=>m.m===i+1)?.tmin_c ?? null);
+  const tmax  = MONTHS.map((_,i)=> months.find(m=>m.m===i+1)?.tmax_c ?? null);
+
+  const annual = d.annual || {};
+  const tMeanLine = (annual.tmean_c!=null) ? MONTHS.map(()=>annual.tmean_c) : MONTHS.map(()=>null);
+  const pMeanLine = (annual.prec_total_mm!=null) ? MONTHS.map(()=>annual.prec_total_mm/12) : MONTHS.map(()=>null);
+
+  // variável extra (opcional)
+  const extraKey = $("extraVar").value;
+  let extraArr = null;
+  let extraLabel = "";
+  let extraAxis = "y2";
+  if(extraKey){
+    const v = d.vars?.[extraKey]?.months;
+    if(Array.isArray(v) && v.length===12){
+      extraArr = v.map(x => (x==null?null:Number(x)));
+      extraLabel = $("extraVar").selectedOptions[0].textContent;
     }
   }
 
-  return out;
-}
+  const ctx = $("chart").getContext("2d");
+  if(chart){ chart.destroy(); }
 
-function summarize({ rain, tmean, tmin, tmax }) {
-  const m = monthLabels();
-  const vr = rain.map((v,i)=>({v,i})).filter(x=>x.v!=null);
-  const vtm = tmean.map((v,i)=>({v,i})).filter(x=>x.v!=null);
-  const vtn = tmin.map((v,i)=>({v,i})).filter(x=>x.v!=null);
-  const vtx = tmax.map((v,i)=>({v,i})).filter(x=>x.v!=null);
-
-  const rainTotal = vr.length ? vr.reduce((a,x)=>a+x.v,0) : null;
-  const rainMean  = vr.length ? rainTotal/vr.length : null;
-  const rainMax   = vr.length ? vr.reduce((b,x)=>x.v>b.v?x:b, vr[0]) : null;
-  const rainMin   = vr.length ? vr.reduce((b,x)=>x.v<b.v?x:b, vr[0]) : null;
-
-  const tMeanYear = vtm.length ? vtm.reduce((a,x)=>a+x.v,0)/vtm.length : null;
-  const tMinYear  = (vtn.length ? Math.min(...vtn.map(x=>x.v)) : (vtm.length ? Math.min(...vtm.map(x=>x.v)) : null));
-  const tMaxYear  = (vtx.length ? Math.max(...vtx.map(x=>x.v)) : (vtm.length ? Math.max(...vtm.map(x=>x.v)) : null));
-
-  const hot  = vtx.length ? vtx.reduce((b,x)=>x.v>b.v?x:b, vtx[0]) : (vtm.length ? vtm.reduce((b,x)=>x.v>b.v?x:b, vtm[0]) : null);
-  const cool = vtn.length ? vtn.reduce((b,x)=>x.v<b.v?x:b, vtn[0]) : (vtm.length ? vtm.reduce((b,x)=>x.v<b.v?x:b, vtm[0]) : null);
-
-  return {
-    rainTotal, rainMean, rainMax, rainMin,
-    tMeanYear, tMinYear, tMaxYear,
-    wetMonth: rainMax?.i ?? null, wetVal: rainMax?.v ?? null,
-    dryMonth: rainMin?.i ?? null, dryVal: rainMin?.v ?? null,
-    hotMonth: hot?.i ?? null, hotVal: hot?.v ?? null,
-    coolMonth: cool?.i ?? null, coolVal: cool?.v ?? null,
-    qualityText: `rain ${vr.length}/12 • tmed ${vtm.length}/12 • tmin ${vtn.length}/12 • tmax ${vtx.length}/12`,
-    monthName: (i)=> (i==null? "—" : m[i])
-  };
-}
-
-async function loadStationYear(id, year) {
-  const key = `${id}-${year}`;
-  if (state.cache.has(key)) return state.cache.get(key);
-
-  const candidates = [
-    `assets/data/${id}/${year}.json`,
-    `assets/data/${year}/${id}.json`,
-    `assets/data/${year}.json`,     // arquivo único por ano
-    `assets/${year}.json`,
-    `assets/data/inmet_${year}.json`,
-  ];
-
-  let raw = null;
-  let used = null;
-
-  for (const p of candidates) {
-    try {
-      raw = await loadJSON(p);
-      used = p;
-      break;
-    } catch {}
-  }
-  if (!raw) throw new Error(`Não encontrei ${id}/${year}.\nTentei:\n- ${candidates.join("\n- ")}`);
-
-  // se for arquivo único por ano, tenta por id
-  let payloadRaw = raw;
-  if (!Array.isArray(raw) && typeof raw === "object") {
-    const byId =
-      raw[id] ??
-      raw?.stations?.[id] ??
-      raw?.data?.[id] ??
-      raw?.estacoes?.[id] ??
-      raw?.seriesByStation?.[id];
-    if (byId && typeof byId === "object") payloadRaw = byId;
-  }
-
-  const quad = extractMonthlyQuad(payloadRaw);
-  const sum = summarize(quad);
-
-  const anyData =
-    quad.rain.some(v=>v!=null) ||
-    quad.tmean.some(v=>v!=null) ||
-    quad.tmin.some(v=>v!=null) ||
-    quad.tmax.some(v=>v!=null);
-
-  const result = { ...quad, summary: sum, sourcePath: used, anyData };
-  state.cache.set(key, result);
-  return result;
-}
-
-/* ===================== DETECÇÃO DE ANOS DISPONÍVEIS (rápida) ===================== */
-
-async function detectYearsForStation(id) {
-  if (state.yearsByStation.has(id)) return state.yearsByStation.get(id);
-
-  // detecção “barata”: testa padrões station/year (HEAD)
-  const yearsFound = [];
-  for (const y of state.years) {
-    const ok1 = await headExists(`assets/data/${id}/${y}.json`);
-    const ok2 = ok1 ? true : await headExists(`assets/data/${y}/${id}.json`);
-    if (ok1 || ok2) yearsFound.push(y);
-  }
-
-  // se não achou nada nesses padrões, informa como “não detectado”
-  state.yearsByStation.set(id, yearsFound);
-  return yearsFound;
-}
-
-/* ===================== CHART (com médias horizontais) ===================== */
-
-function ensureChart() {
-  if (state.chart) return;
-
-  // ✅ registra plugin corretamente (resolve “reset zoom não funciona”)
-  const zoomPlugin = window.ChartZoom || window['chartjs-plugin-zoom'];
-  if (zoomPlugin) Chart.register(zoomPlugin);
-
-  const ctx = $("#chart").getContext("2d");
-
-  state.chart = new Chart(ctx, {
+  chart = new Chart(ctx, {
+    type: "bar",
     data: {
-      labels: monthLabels(),
+      labels: MONTHS,
       datasets: [
-        // chuva
         {
           type: "bar",
           label: "Precipitação (mm)",
-          data: new Array(12).fill(null),
-          yAxisID: "yRain",
-          backgroundColor: "rgba(45, 125, 246, .80)",
-          borderRadius: 8,
+          data: prec,
+          yAxisID: "y",
+          borderWidth: 0,
+          order: 2
         },
-        // linha média chuva (horizontal)
         {
           type: "line",
-          label: "Média chuva (mês)",
-          data: new Array(12).fill(null),
-          yAxisID: "yRain",
-          borderColor: "rgba(45, 125, 246, .35)",
+          label: "Chuva média (total/12)",
+          data: pMeanLine,
+          yAxisID: "y",
+          borderWidth: 2,
           pointRadius: 0,
-          tension: 0,
+          tension: .2,
+          order: 1
         },
-
-        // tmax
         {
           type: "line",
-          label: "T máx (°C)",
-          data: new Array(12).fill(null),
-          yAxisID: "yTemp",
-          borderColor: "rgba(255, 122, 80, .95)",
+          label: "Temp. média (°C)",
+          data: tmean,
+          yAxisID: "y1",
+          borderWidth: 2,
           pointRadius: 2,
-          tension: 0.25,
-          fill: false
+          tension: .25,
+          order: 3
         },
-        // faixa tmin (para preencher até tmax)
         {
           type: "line",
-          label: "Faixa T min–T máx",
-          data: new Array(12).fill(null),
-          yAxisID: "yTemp",
-          borderColor: "rgba(255, 122, 80, .18)",
-          backgroundColor: "rgba(255, 122, 80, .12)",
+          label: "Média anual (T)",
+          data: tMeanLine,
+          yAxisID: "y1",
+          borderWidth: 1.8,
           pointRadius: 0,
-          tension: 0.25,
-          fill: { target: 2 } // preenche até o dataset de T máx
+          borderDash: [6,6],
+          tension: 0,
+          order: 0
         },
-        // tmed
         {
           type: "line",
-          label: "T méd (°C)",
-          data: new Array(12).fill(null),
-          yAxisID: "yTemp",
-          borderColor: "rgba(255, 92, 92, .95)",
-          pointRadius: 3,
-          pointHoverRadius: 6,
-          tension: 0.25,
-          fill: false
-        },
-        // linha média anual de temp (horizontal)
-        {
-          type: "line",
-          label: "Média anual (T méd)",
-          data: new Array(12).fill(null),
-          yAxisID: "yTemp",
-          borderColor: "rgba(255, 92, 92, .35)",
+          label: "Faixa Tmin–Tmax",
+          data: tmax,
+          yAxisID: "y1",
           pointRadius: 0,
-          tension: 0
+          borderWidth: 1.2,
+          fill: { target: "-1" },  // preenche até o dataset anterior (tmin)
+          order: 4
         },
-      ]
+        {
+          type: "line",
+          label: "Tmin (°C)",
+          data: tmin,
+          yAxisID: "y1",
+          pointRadius: 0,
+          borderWidth: 1.2,
+          order: 4
+        },
+      ].concat(extraArr ? [{
+          type: "line",
+          label: extraLabel,
+          data: extraArr,
+          yAxisID: extraAxis,
+          borderWidth: 2,
+          pointRadius: 1,
+          tension: .2,
+          order: 5
+      }] : [])
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
       interaction: { mode: "index", intersect: false },
       plugins: {
-        legend: { display: true },
-        tooltip: { enabled: true },
+        legend: { position: "top" },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => {
+              const v = ctx.parsed.y;
+              if(v==null || Number.isNaN(v)) return `${ctx.dataset.label}: —`;
+              const isTemp = ctx.dataset.yAxisID !== "y";
+              return `${ctx.dataset.label}: ${isTemp ? fmt(v,1)+" °C" : fmt(v,1)+" mm"}`;
+            }
+          }
+        },
         zoom: {
-          zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: "xy" },
-          pan: { enabled: true, mode: "xy" }
+          zoom: {
+            wheel: { enabled: true },
+            pinch: { enabled: true },
+            mode: "x",
+          },
+          pan: { enabled: true, mode: "x" }
         }
       },
       scales: {
-        yRain: { position: "left", title: { display: true, text: "Precipitação (mm)" }, beginAtZero: true },
-        yTemp: { position: "right", title: { display: true, text: "Temperatura (°C)" }, grid: { drawOnChartArea: false } },
-        x: { grid: { display: false } }
+        y: {
+          position: "left",
+          title: { display: true, text: "Precipitação (mm)" },
+          beginAtZero: true,
+          grid: { color: "rgba(11,34,48,.08)" }
+        },
+        y1: {
+          position: "right",
+          title: { display: true, text: "Temperatura (°C)" },
+          grid: { drawOnChartArea: false }
+        },
+        y2: {
+          position: "right",
+          display: !!extraArr,
+          offset: true,
+          title: { display: !!extraArr, text: extraLabel },
+          grid: { drawOnChartArea: false }
+        },
+        x: { grid: { color: "rgba(11,34,48,.06)" } }
       }
     }
   });
 
-  $("#chart").addEventListener("dblclick", () => state.chart?.resetZoom?.());
+  // duplo clique reseta zoom
+  $("chart").ondblclick = () => chart?.resetZoom?.();
 }
 
-function setStationHeader(s) {
-  $("#stationTitle").textContent = `${s.name} (${s.uf})`;
-  $("#stationMeta").textContent = `ID ${s.id} • ${fmt1(s.lat)}, ${fmt1(s.lon)}`;
-}
+/* -------- Events -------- */
+$("yearSelect").addEventListener("change", async ()=>{
+  if(!selectedStation) return;
+  const {id} = stationLabel(selectedStation);
+  await loadStationYear(id, Number($("yearSelect").value));
+});
 
-function applyToUI(id, year, data) {
-  const s = state.stations.find(x => x.id === id);
-  if (!s) return;
+$("extraVar").addEventListener("change", ()=>{
+  // re-render gráfico com a variável extra
+  if(!selectedStation || !chart) return;
+  const {id} = stationLabel(selectedStation);
+  loadStationYear(id, selectedYear);
+});
 
-  setStationHeader(s);
+$("btnResetZoom").addEventListener("click", ()=>{
+  chart?.resetZoom?.();
+});
 
-  const sum = data.summary;
+$("btnAll").addEventListener("click", ()=>{
+  // zoom para Brasil
+  map.setView([-14.2, -52.6], 4, {animate:true});
+  cluster.refreshClusters?.();
+});
 
-  $("#kTmin").textContent  = sum.tMinYear==null ? "—" : `${fmt1(sum.tMinYear)} °C`;
-  $("#kTmean").textContent = sum.tMeanYear==null ? "—" : `${fmt1(sum.tMeanYear)} °C`;
-  $("#kTmax").textContent  = sum.tMaxYear==null ? "—" : `${fmt1(sum.tMaxYear)} °C`;
-
-  $("#kRain").textContent     = sum.rainTotal==null ? "—" : `${fmt1(sum.rainTotal)} mm`;
-  $("#kRainMean").textContent = sum.rainMean==null ? "—" : `${fmt1(sum.rainMean)} mm`;
-  $("#kRainMax").textContent  = sum.rainMax==null ? "—" : `${sum.monthName(sum.rainMax.i)} • ${fmt1(sum.rainMax.v)} mm`;
-  $("#kRainMin").textContent  = sum.rainMin==null ? "—" : `${sum.monthName(sum.rainMin.i)} • ${fmt1(sum.rainMin.v)} mm`;
-  $("#kQuality").textContent  = sum.qualityText;
-
-  $("#summary").innerHTML = `
-    <div class="item"><span class="badge">📌</span><div><b>${escapeHTML(id)}</b> • <b>${escapeHTML(String(year))}</b></div></div>
-    <div class="item"><span class="badge">🌧️</span><div><b>Mês mais chuvoso:</b> ${sum.wetMonth==null? "—" : `${sum.monthName(sum.wetMonth)} (${fmt1(sum.wetVal)} mm)`}</div></div>
-    <div class="item"><span class="badge">🏜️</span><div><b>Mês mais seco:</b> ${sum.dryMonth==null? "—" : `${sum.monthName(sum.dryMonth)} (${fmt1(sum.dryVal)} mm)`}</div></div>
-    <div class="item"><span class="badge">🔥</span><div><b>Mês mais quente:</b> ${sum.hotMonth==null? "—" : `${sum.monthName(sum.hotMonth)} (${fmt1(sum.hotVal)} °C)`}</div></div>
-    <div class="item"><span class="badge">❄️</span><div><b>Mês mais fresco:</b> ${sum.coolMonth==null? "—" : `${sum.monthName(sum.coolMonth)} (${fmt1(sum.coolVal)} °C)`}</div></div>
-  `;
-
-  ensureChart();
-
-  // dados
-  const rain = data.rain.map(v => v==null? null : Number(v));
-  const tmax = data.tmax.map(v => v==null? null : Number(v));
-  const tmin = data.tmin.map(v => v==null? null : Number(v));
-  const tmed = data.tmean.map(v => v==null? null : Number(v));
-
-  // linhas de média horizontais
-  const rainMeanLine = (sum.rainMean==null) ? new Array(12).fill(null) : new Array(12).fill(Number(sum.rainMean));
-  const tMeanLine    = (sum.tMeanYear==null) ? new Array(12).fill(null) : new Array(12).fill(Number(sum.tMeanYear));
-
-  // aplica no chart
-  state.chart.data.datasets[0].data = rain;          // bar
-  state.chart.data.datasets[1].data = rainMeanLine;  // média chuva
-  state.chart.data.datasets[2].data = tmax;          // tmax
-  state.chart.data.datasets[3].data = tmin;          // faixa (tmin)
-  state.chart.data.datasets[4].data = tmed;          // tmed
-  state.chart.data.datasets[5].data = tMeanLine;     // média anual temp
-
-  state.chart.update();
-
-  setDebug(`Fonte: ${data.sourcePath}${data.anyData ? "" : "\n⚠️ Carregou arquivo, mas não reconheci os campos mensais."}`);
-}
-
-/* ===================== SELEÇÃO + ZOOM GARANTIDO ===================== */
-
-async function selectStation(id, fromMap=false) {
-  state.selectedStationId = id;
-  renderList();
-
-  const s = state.stations.find(x => x.id === id);
-
-  // ✅ zoom/centralização “na marra”: flyTo + fallback setView
-  if (s && state.map) {
-    const targetZoom = 10;
-
-    try {
-      state.map.flyTo([s.lat, s.lon], targetZoom, { animate: true, duration: 0.8 });
-    } catch {}
-
-    // fallback (garante mesmo se fly falhar)
-    setTimeout(() => {
-      try { state.map.setView([s.lat, s.lon], targetZoom, { animate: false }); } catch {}
-    }, 900);
-
-    const mk = state.markerById.get(id);
-    if (mk) setTimeout(() => { try { mk.openTooltip(); } catch{} }, 450);
-
-    const el = document.querySelector(`.station[data-id="${CSS.escape(id)}"]`);
-    if (el) el.scrollIntoView({ block: "center", behavior: "smooth" });
+$("q").addEventListener("input", ()=>{
+  const q = norm($("q").value);
+  if(!q){
+    renderList(stations);
+    return;
   }
-
-  // fecha drawer no mobile após selecionar
-  closeDrawer();
-
-  // anos disponíveis (detecção)
-  $("#yearsAvail").textContent = "Detectando…";
-  detectYearsForStation(id).then(yrs => {
-    $("#yearsAvail").textContent = yrs.length
-      ? yrs.join(", ")
-      : "Não detectado pelos padrões (pode estar em arquivo único por ano).";
+  const filtered = stations.filter(s=>{
+    const {id,name,uf} = stationLabel(s);
+    const t = norm(`${id} ${name} ${uf}`);
+    return t.includes(q);
   });
+  renderList(filtered);
+});
 
-  const year = state.selectedYear;
-  if (!year) return;
+$("clearSearch").addEventListener("click", ()=>{
+  $("q").value = "";
+  renderList(stations);
+});
 
-  try {
-    setStatus(`Carregando ${id}/${year}…`);
-    const data = await loadStationYear(id, year);
-    applyToUI(id, year, data);
-    setStatus("Pronto ✅");
-  } catch (e) {
-    console.error(e);
-    setStatus("Erro ao carregar dados");
-    setDebug(e.message);
+$("toggleStations").addEventListener("click", ()=>{
+  // em mobile: alterna lista
+  const panel = $("leftPanel");
+  panel.classList.toggle("open");
+  $("toggleStations").textContent = panel.classList.contains("open") ? "Fechar" : "Abrir";
+});
 
-    // limpa UI
-    $("#kTmin").textContent = $("#kTmean").textContent = $("#kTmax").textContent = "—";
-    $("#kRain").textContent = $("#kRainMean").textContent = $("#kRainMax").textContent = $("#kRainMin").textContent = "—";
-    $("#kQuality").textContent = "—";
-    $("#summary").innerHTML = `<div class="muted">Não encontrei dados dessa estação/ano.</div>`;
-
-    ensureChart();
-    state.chart.data.datasets.forEach(d => d.data = new Array(12).fill(null));
-    state.chart.update();
-  }
-}
-
-/* ===================== EXPORTS ===================== */
-
-function exportPNG() {
-  if (!state.chart) return;
+$("btnPng").addEventListener("click", ()=>{
+  if(!chart) return;
   const a = document.createElement("a");
-  const id = state.selectedStationId || "station";
-  const year = state.selectedYear || "year";
-  a.download = `climograma_${id}_${year}.png`;
-  a.href = state.chart.toBase64Image("image/png", 1);
+  a.href = chart.toBase64Image("image/png", 1);
+  const st = selectedStation ? stationLabel(selectedStation) : {id:"station"};
+  a.download = `climograma_${st.id}_${selectedYear}.png`;
   a.click();
-}
+});
 
-async function exportCSV() {
-  const id = state.selectedStationId;
-  const year = state.selectedYear;
-  if (!id || !year) return;
+$("btnCsv").addEventListener("click", async ()=>{
+  if(!selectedStation) return;
+  const {id} = stationLabel(selectedStation);
+  try{
+    const d = await fetchJson(`assets/data/${id}/${selectedYear}.json`);
+    const rows = (d.months||[]).map(m=>({
+      ano: d.year,
+      mes: m.m,
+      mes_nome: MONTHS[m.m-1],
+      prec_mm: m.prec_mm ?? "",
+      tmean_c: m.tmean_c ?? "",
+      tmin_c: m.tmin_c ?? "",
+      tmax_c: m.tmax_c ?? "",
+      rh: d.vars?.rh?.months?.[m.m-1] ?? "",
+      press: d.vars?.press?.months?.[m.m-1] ?? "",
+      rad: d.vars?.rad?.months?.[m.m-1] ?? "",
+      wind: d.vars?.wind?.months?.[m.m-1] ?? ""
+    }));
 
-  const data = await loadStationYear(id, year);
-  const labels = monthLabels();
+    const header = Object.keys(rows[0]||{});
+    const csv = [
+      header.join(";"),
+      ...rows.map(r => header.map(k => String(r[k] ?? "").replaceAll(";", ",")).join(";"))
+    ].join("\n");
 
-  const rows = [["station_id","year","month","precip_mm","tmin_c","tmean_c","tmax_c"]];
-  for (let i=0;i<12;i++){
-    rows.push([id, String(year), labels[i], data.rain[i] ?? "", data.tmin[i] ?? "", data.tmean[i] ?? "", data.tmax[i] ?? ""]);
-  }
-  const csv = rows.map(r => r.map(v => {
-    const s = String(v ?? "");
-    return (s.includes(",")||s.includes('"')||s.includes("\n")) ? `"${s.replaceAll('"','""')}"` : s;
-  }).join(",")).join("\n");
-
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `climograma_${id}_${year}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-/* ===================== DRAWER (mobile) ===================== */
-
-function openDrawer(){
-  $("#leftPanel").classList.add("open");
-  $("#backdrop").classList.add("show");
-}
-function closeDrawer(){
-  $("#leftPanel").classList.remove("open");
-  $("#backdrop").classList.remove("show");
-}
-
-/* ===================== EVENTS ===================== */
-
-function setupEvents() {
-  $("#q").addEventListener("input", () => {
-    state.filtered = filterStations($("#q").value);
-    renderList(); renderMarkers();
-  });
-  $("#clearQ").addEventListener("click", () => {
-    $("#q").value = "";
-    state.filtered = filterStations("");
-    renderList(); renderMarkers();
-  });
-
-  $("#yearSel").addEventListener("change", async () => {
-    state.selectedYear = Number($("#yearSel").value);
-    if (state.selectedStationId) await selectStation(state.selectedStationId);
-  });
-
-  $("#btnAll").addEventListener("click", () => {
-    $("#q").value = "";
-    state.filtered = [...state.stations];
-    renderList(); renderMarkers();
-    focusToFiltered();
-  });
-
-  $("#btnFocus").addEventListener("click", () => focusToFiltered());
-
-  $("#btnResetZoom").addEventListener("click", () => {
-    if (state.chart?.resetZoom) state.chart.resetZoom();
-  });
-
-  $("#btnPNG").addEventListener("click", exportPNG);
-  $("#btnCSV").addEventListener("click", exportCSV);
-
-  $("#list").addEventListener("click", (ev) => {
-    const card = ev.target.closest(".station");
-    if (!card) return;
-    const id = card.getAttribute("data-id");
-    if (id) selectStation(id, false);
-  });
-
-  // drawer
-  $("#btnDrawer").addEventListener("click", openDrawer);
-  $("#btnCloseDrawer").addEventListener("click", closeDrawer);
-  $("#backdrop").addEventListener("click", closeDrawer);
-}
-
-/* ===================== INIT ===================== */
-
-async function main() {
-  try {
-    setStatus("Carregando…");
-    ensureMap();
-    ensureChart();
-
-    const stRaw = await loadJSON("assets/stations.json");
-    state.stations = parseStations(stRaw);
-    if (!state.stations.length) throw new Error("stations.json não tem estações válidas (id/lat/lon).");
-
-    state.years = buildYears();
-    renderYears();
-
-    state.filtered = [...state.stations];
-    renderList();
-    renderMarkers();
-    focusToFiltered();
-
-    setStatus("Pronto ✅");
-    setDebug("");
-
-  } catch (e) {
+    const blob = new Blob([csv], {type:"text/csv;charset=utf-8"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `clima_${id}_${selectedYear}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }catch(e){
+    alert("Não consegui exportar CSV desse ano/estação.");
     console.error(e);
-    setStatus("Erro");
-    setDebug(e.message);
   }
-}
+});
 
-setupEvents();
-main();
+/* -------- Start -------- */
+loadBase().catch(err=>{
+  console.error(err);
+  setStatus("Erro ao iniciar", false);
+  alert("Erro ao iniciar o app. Veja o console (F12).");
+});
