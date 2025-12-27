@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Climogramas do Brasil — INMET</title>
+  <link rel="icon" type="image/png" href="assets/icon.png">
+  <meta name="theme-color" content="#2563eb"/>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+
+  <link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="dot"></div>
+      <div>
+        <div class="title">Transforma-Ação Climática</div>
+        <div class="subtitle">
+          Climogramas do Brasil • Elaborado por <b>Ernandes Sobreira</b> • Dados do INMET
+        </div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <input id="q" class="input" placeholder="Buscar estação (nome, UF, id)..." autocomplete="off"/>
+      <select id="year" class="select"></select>
+      <button id="btnExportPNG" class="btn">Exportar PNG</button>
+      <button id="btnExportCSV" class="btn ghost">Exportar CSV</button>
+      <button id="btnAll" class="btn ghost small" title="Limpar busca e mostrar todas">Mostrar todas</button>
+    </div>
+  </header>
+
+  <main class="grid">
+    <section class="panel left">
+      <div class="panelHead">
+        <div class="h">Estações</div>
+        <div class="headRight">
+          <div class="note" id="countNote">—</div>
+          <button id="btnStations" class="btn ghost small" type="button">Abrir</button>
+        </div>
+      </div>
+      <div id="list" class="list"></div>
+      <div class="legend">
+        <div class="lg"></div>
+        <div class="legendText">
+          Clique numa estação (lista) ou no ponto do mapa.<br/>
+          A régua anual mostra <b>mínimo</b>, <b>média</b> e <b>máximo</b> do ano.
+        </div>
+      </div>
+    </section>
+
+    <section class="panel mid">
+      <div id="map" class="map"></div>
+    </section>
+
+    <section class="panel right">
+      <div class="panelHead">
+        <div class="h" id="stationTitle">Selecione uma estação</div>
+        <div class="note" id="stationMeta">—</div>
+      </div>
+      <div class="cards" id="cards"></div>
+      <div id="insights" class="insights"></div>
+      <div class="chartWrap"><div id="chart" class="chart"></div></div>
+      <div class="footerHint" id="footerHint">
+        Dica: no gráfico, use o zoom e passe o mouse para ver valores (tooltips).
+      </div>
+    </section>
+  </main>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
