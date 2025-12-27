@@ -9,20 +9,17 @@
   <link rel="stylesheet" href="./styles.css" />
 
   <!-- Leaflet -->
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-    crossorigin=""
-  />
+  <link rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+        crossorigin=""/>
 
-  <!-- MarkerCluster (pra ficar igual ao seu print: bolinhas com números) -->
+  <!-- MarkerCluster -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
 
-  <!-- Chart.js -->
+  <!-- Chart.js + Zoom -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-  <!-- Zoom plugin -->
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.umd.min.js"></script>
 </head>
 
@@ -65,8 +62,8 @@
         <div class="tips">
           <ul>
             <li>Clique numa estação (lista) ou no ponto do mapa.</li>
-            <li>Use zoom no gráfico para ver detalhes (scroll/pinch).</li>
-            <li>Duplo-clique no gráfico para resetar o zoom.</li>
+            <li>O mapa vai centralizar e dar zoom automaticamente.</li>
+            <li>No gráfico: scroll/pinch para zoom, arraste para pan, duplo-clique reseta.</li>
           </ul>
         </div>
 
@@ -97,53 +94,30 @@
         <button id="btnResetZoom" class="btn tiny">Reset zoom</button>
       </div>
 
-      <div class="panelBody">
+      <div class="panelBody rightBody">
         <div class="cards">
-          <div class="card">
-            <div class="cardLabel">T min (ano)</div>
-            <div id="kTmin" class="cardValue">—</div>
-          </div>
-          <div class="card">
-            <div class="cardLabel">T méd (ano)</div>
-            <div id="kTmean" class="cardValue">—</div>
-          </div>
-          <div class="card">
-            <div class="cardLabel">T máx (ano)</div>
-            <div id="kTmax" class="cardValue">—</div>
-          </div>
-          <div class="card">
-            <div class="cardLabel">Chuva total</div>
-            <div id="kRain" class="cardValue">—</div>
-          </div>
+          <div class="card"><div class="cardLabel">T min (ano)</div><div id="kTmin" class="cardValue">—</div></div>
+          <div class="card"><div class="cardLabel">T méd (ano)</div><div id="kTmean" class="cardValue">—</div></div>
+          <div class="card"><div class="cardLabel">T máx (ano)</div><div id="kTmax" class="cardValue">—</div></div>
+          <div class="card"><div class="cardLabel">Chuva total</div><div id="kRain" class="cardValue">—</div></div>
 
-          <div class="card">
-            <div class="cardLabel">Chuva méd (mês)</div>
-            <div id="kRainMean" class="cardValue">—</div>
-          </div>
-          <div class="card">
-            <div class="cardLabel">Chuva máx (mês)</div>
-            <div id="kRainMax" class="cardValue">—</div>
-          </div>
-          <div class="card">
-            <div class="cardLabel">Chuva mín (mês)</div>
-            <div id="kRainMin" class="cardValue">—</div>
-          </div>
-          <div class="card">
-            <div class="cardLabel">Qualidade</div>
-            <div id="kQuality" class="cardValue">—</div>
-          </div>
+          <div class="card"><div class="cardLabel">Chuva méd (mês)</div><div id="kRainMean" class="cardValue">—</div></div>
+          <div class="card"><div class="cardLabel">Chuva máx (mês)</div><div id="kRainMax" class="cardValue">—</div></div>
+          <div class="card"><div class="cardLabel">Chuva mín (mês)</div><div id="kRainMin" class="cardValue">—</div></div>
+          <div class="card"><div class="cardLabel">Qualidade</div><div id="kQuality" class="cardValue">—</div></div>
         </div>
 
         <div class="box">
           <div class="boxTitle">Resumo climático</div>
-          <div id="summary" class="summary">
-            <div class="muted">—</div>
-          </div>
+          <div id="summary" class="summary"><div class="muted">—</div></div>
         </div>
 
         <div class="chartBox">
-          <canvas id="chart" height="260"></canvas>
-          <div class="chartHint">Dica: use zoom (scroll/pinch) e passe o mouse para ver tooltips. Duplo-clique reseta.</div>
+          <div class="chartWrap">
+            <canvas id="chart"></canvas>
+          </div>
+          <div class="chartHint">Dica: zoom com scroll/pinch. Arraste para pan. Duplo-clique reseta.</div>
+          <div id="debug" class="debug muted"></div>
         </div>
       </div>
     </aside>
@@ -155,11 +129,9 @@
   </footer>
 
   <!-- Leaflet JS -->
-  <script
-    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-    crossorigin=""
-  ></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+          integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+          crossorigin=""></script>
 
   <!-- MarkerCluster -->
   <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
