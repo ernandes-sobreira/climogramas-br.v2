@@ -1,14 +1,18 @@
-# Dados brutos (muito grandes)
+# Dados brutos (NÃO publicam no Pages)
 raw/
-tools/
+**/*.CSV
+**/*.csv
+**/*.zip
 
-# Python cache
+# Lixo de sistema
+.DS_Store
+Thumbs.db
+
+# Python
 __pycache__/
 *.pyc
+.venv/
+venv/
 
 # Logs
 *.log
-
-# Windows cruft
-Thumbs.db
-.DS_Store
