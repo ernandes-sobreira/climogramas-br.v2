@@ -107,9 +107,15 @@
         <div class="summary" id="summary">Selecione uma estação para ver o climograma.</div>
       </div>
 
-      <div class="chartWrap">
-        <canvas id="chart" height="280"></canvas>
-      </div>
+     <div class="tabs">
+  <button class="tab active" id="tabTemp" type="button">Temperatura</button>
+  <button class="tab" id="tabRain" type="button">Precipitação</button>
+</div>
+
+<div class="chartWrap">
+  <canvas id="chartTemp" height="360"></canvas>
+  <canvas id="chartRain" height="360" class="hidden"></canvas>
+</div>
 
       <div class="footnote">
         Dica: no gráfico, use o zoom e passe o mouse para ver valores (tooltips).
