@@ -1,254 +1,168 @@
-:root{
-  --ink:#0b2230;
-  --muted:#54707d;
-  --line:rgba(11,34,48,.12);
-  --bg:#eef5f7;
-  --card:#ffffff;
-  --brand:#0b6f75;
-  --brand2:#2b74ff;
-  --shadow: 0 18px 40px rgba(11,34,48,.10);
-  --r:16px;
-}
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Transforma-Ação Climática — Climogramas do Brasil (INMET)</title>
 
-*{ box-sizing:border-box; }
-html,body{ height:100%; }
-body{
-  margin:0;
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  color:var(--ink);
-  background:linear-gradient(180deg, #0b6f75 0, #0b6f75 64px, var(--bg) 64px);
-}
+  <link rel="stylesheet" href="styles.css" />
 
-.topbar{
-  position:sticky; top:0; z-index:50;
-  display:flex; align-items:center; justify-content:space-between;
-  gap:14px;
-  padding: 12px 14px;
-  color:#fff;
-}
+  <!-- Leaflet + MarkerCluster -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
+</head>
 
-.brand{ display:flex; align-items:center; gap:10px; min-width: 260px;}
-.dot{
-  width:10px; height:10px; border-radius:50%;
-  background:#97f0c9;
-  box-shadow:0 0 0 4px rgba(151,240,201,.22);
-}
-.title{ font-weight:900; letter-spacing:.2px;}
-.sub{ font-size:12px; opacity:.95; }
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="dot"></div>
+      <div class="brandText">
+        <div class="title">Transforma-Ação Climática</div>
+        <div class="subtitle">Climogramas do Brasil • Elaborado por <b>Ernandes Sobreira</b> • Dados do INMET</div>
+      </div>
+    </div>
 
-.actions{
-  display:flex; align-items:center; gap:10px;
-  flex-wrap:wrap;
-  justify-content:flex-end;
-}
+    <div class="controls">
+      <div class="searchBox">
+        <input id="q" type="search" placeholder="Buscar estação (nome, UF, id)..." autocomplete="off" />
+        <button id="clearSearch" class="iconBtn" title="Limpar busca">×</button>
+      </div>
 
-.searchWrap{
-  display:flex; align-items:center;
-  background: rgba(255,255,255,.16);
-  border:1px solid rgba(255,255,255,.18);
-  border-radius:999px;
-  overflow:hidden;
-}
-.search{
-  width:min(360px, 46vw);
-  padding: 10px 12px;
-  outline:none;
-  border:none;
-  background:transparent;
-  color:#fff;
-}
-.search::placeholder{ color: rgba(255,255,255,.78); }
-.iconBtn{
-  border:none; background:transparent; color:#fff;
-  padding: 10px 12px; cursor:pointer;
-  opacity:.9;
-}
-.iconBtn:hover{ opacity:1; }
+      <select id="yearSelect" class="select"></select>
 
-.select{
-  padding: 10px 12px;
-  border-radius:999px;
-  border: 1px solid rgba(255,255,255,.18);
-  background: rgba(255,255,255,.16);
-  color:#fff;
-  outline:none;
-}
-.select option{ color:#0b2230; }
+      <select id="extraVar" class="select" title="Variável extra (se existir nos JSONs)">
+        <option value="">(sem variável extra)</option>
+        <option value="rh">Umidade relativa (média)</option>
+        <option value="rad">Radiação global (média)</option>
+        <option value="press">Pressão (média)</option>
+        <option value="wind">Vento (média)</option>
+      </select>
 
-.btn{
-  border:1px solid rgba(255,255,255,.22);
-  background: rgba(255,255,255,.16);
-  color:#fff;
-  padding: 10px 12px;
-  border-radius:999px;
-  cursor:pointer;
-  font-weight:800;
-}
-.btn:hover{ filter:brightness(1.03); }
-.btn.primary{
-  background: rgba(43,116,255,.95);
-  border-color: rgba(43,116,255,.95);
-}
-.btn.ghost{
-  background: rgba(255,255,255,.08);
-}
-.btn.small{ padding: 8px 10px; font-size:12px; }
+      <button id="btnPng" class="btn primary">Exportar PNG</button>
+      <button id="btnCsv" class="btn">Exportar CSV</button>
+      <button id="btnAll" class="btn ghost">Mostrar todas</button>
 
-.grid{
-  padding: 14px;
-  display:grid;
-  gap: 14px;
-  grid-template-columns: 320px 1fr 420px;
-  align-items:stretch;
-}
+      <div id="statusPill" class="status">Carregando…</div>
+      <button id="toggleStations" class="btn ghost mobileOnly">Abrir</button>
+    </div>
+  </header>
 
-.panel{
-  background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: var(--r);
-  box-shadow: var(--shadow);
-  overflow:hidden;
-  min-height: calc(100vh - 90px);
-}
-.panelHead{
-  padding: 12px 12px;
-  display:flex; align-items:center; justify-content:space-between;
-  gap:10px;
-  border-bottom:1px solid var(--line);
-  background: linear-gradient(180deg, rgba(11,111,117,.07), rgba(255,255,255,0));
-}
-.panelTitle{ font-weight:900; }
-.panelSub{ font-size:12px; color: var(--muted); margin-top:2px; }
+  <main class="layout">
+    <!-- LEFT: Stations -->
+    <aside id="leftPanel" class="panel left">
+      <div class="panelHead">
+        <div>
+          <div class="h">Estações</div>
+          <div class="small"><span id="stationCount">—</span> estações</div>
+        </div>
+        <button id="btnFocus" class="btn ghost">Focar</button>
+      </div>
 
-.status{
-  font-size:12px;
-  padding: 6px 10px;
-  border-radius:999px;
-  border: 1px solid rgba(11,111,117,.18);
-  background: rgba(11,111,117,.12);
-  color: var(--brand);
-  font-weight:800;
-}
+      <div class="hint">
+        <ul>
+          <li>Clique numa estação (lista) ou no ponto do mapa.</li>
+          <li>Zoom no gráfico (scroll/pinch) para ver detalhes.</li>
+          <li>Duplo-clique no gráfico ou “Reset zoom”.</li>
+        </ul>
+      </div>
 
-.left .list{
-  padding: 10px;
-  display:flex;
-  flex-direction:column;
-  gap:10px;
-  max-height: calc(100vh - 220px);
-  overflow:auto;
-}
+      <div id="stationList" class="list"></div>
+    </aside>
 
-.item{
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  padding: 10px 10px;
-  cursor:pointer;
-  background:#fff;
-}
-.item:hover{
-  box-shadow: 0 12px 26px rgba(11,34,48,.10);
-}
-.item.active{
-  border-color: rgba(43,116,255,.45);
-  box-shadow: 0 12px 26px rgba(43,116,255,.14);
-}
-.item .name{ font-weight:900; }
-.item .meta{
-  display:flex; justify-content:space-between;
-  font-size:12px; color: var(--muted);
-  margin-top:4px;
-}
+    <!-- CENTER: Map -->
+    <section class="panel center">
+      <div class="panelHead">
+        <div>
+          <div class="h">Mapa</div>
+          <div class="small">Clique nos pontos para selecionar</div>
+        </div>
+        <div class="pill" id="mapPill">—</div>
+      </div>
+      <div id="map" class="map"></div>
+    </section>
 
-.hint{
-  padding: 10px 12px;
-  border-bottom:1px solid var(--line);
-  color: var(--muted);
-  font-size:12px;
-}
-.hint ul{ margin:0; padding-left: 16px; }
-.hint li{ margin: 4px 0; }
+    <!-- RIGHT: Details -->
+    <aside class="panel right">
+      <div class="panelHead">
+        <div>
+          <div id="stationTitle" class="h">Selecione uma estação</div>
+          <div id="stationMeta" class="small">—</div>
+        </div>
+        <button id="btnResetZoom" class="btn ghost">Reset zoom</button>
+      </div>
 
-.map{ height: calc(100vh - 160px); }
+      <div class="kpis">
+        <div class="kpi">
+          <div class="k">T mín (ano)</div>
+          <div class="v" id="kTmin">—</div>
+        </div>
+        <div class="kpi">
+          <div class="k">T méd (ano)</div>
+          <div class="v" id="kTmean">—</div>
+        </div>
+        <div class="kpi">
+          <div class="k">T máx (ano)</div>
+          <div class="v" id="kTmax">—</div>
+        </div>
+        <div class="kpi">
+          <div class="k">Chuva total</div>
+          <div class="v" id="kPtotal">—</div>
+        </div>
 
-.kpis{
-  padding: 12px;
-  display:grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap:10px;
-}
-.kpi{
-  border:1px solid var(--line);
-  border-radius: 14px;
-  padding: 10px 10px;
-  background:#fff;
-}
-.kLabel{ font-size:12px; color: var(--muted); }
-.kVal{ font-size:16px; font-weight:900; margin-top:4px; }
+        <div class="kpi">
+          <div class="k">Chuva méd (mês)</div>
+          <div class="v" id="kPmean">—</div>
+        </div>
+        <div class="kpi">
+          <div class="k">Chuva máx (mês)</div>
+          <div class="v" id="kPmax">—</div>
+        </div>
+        <div class="kpi">
+          <div class="k">Chuva mín (mês)</div>
+          <div class="v" id="kPmin">—</div>
+        </div>
+        <div class="kpi">
+          <div class="k">Anos disponíveis</div>
+          <div class="v" id="kYears">—</div>
+        </div>
+      </div>
 
-.box{
-  margin: 0 12px;
-  border:1px solid var(--line);
-  border-radius: 14px;
-  padding: 10px;
-  background:#fff;
-}
-.boxTitle{ font-weight:900; margin-bottom:6px; }
-.summary{ font-size:13px; color:#183746; line-height:1.35; }
+      <div class="summaryCard">
+        <div class="h2">Resumo climático</div>
+        <div id="summary" class="summaryText">Selecione uma estação para ver o climograma.</div>
+      </div>
 
-.tabs{
-  display:flex;
-  gap:8px;
-  padding: 12px 12px 8px;
-}
-.tab{
-  border:1px solid var(--line);
-  background:#fff;
-  color: var(--ink);
-  border-radius: 999px;
-  padding: 8px 12px;
-  cursor:pointer;
-  font-weight:900;
-  font-size:13px;
-}
-.tab.active{
-  border-color: rgba(43,116,255,.55);
-  box-shadow: 0 12px 26px rgba(43,116,255,.12);
-}
-.hidden{ display:none !important; }
+      <div class="tabs">
+        <button class="tab active" data-tab="temp">Temperatura</button>
+        <button class="tab" data-tab="prec">Precipitação</button>
+      </div>
 
-.chartBox{
-  padding: 0 12px 12px;
-  height: 360px;
-}
-.chartBox canvas{
-  width:100% !important;
-  height:100% !important;
-}
+      <div class="chartWrap">
+        <div id="tab-temp" class="tabPane active">
+          <div class="chartBox">
+            <canvas id="chartTemp"></canvas>
+          </div>
+          <div class="foot">Dica: use zoom no gráfico para ver valores (tooltips).</div>
+        </div>
 
-.foot{
-  padding: 0 12px 12px;
-  font-size:12px;
-  color: var(--muted);
-}
+        <div id="tab-prec" class="tabPane">
+          <div class="chartBox">
+            <canvas id="chartPrec"></canvas>
+          </div>
+          <div class="foot">Dica: use zoom no gráfico para ver valores (tooltips).</div>
+        </div>
+      </div>
+    </aside>
+  </main>
 
-.mobileOnly{ display:none; }
+  <!-- libs -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 
-@media (max-width: 1100px){
-  .grid{ grid-template-columns: 1fr; }
-  .panel{ min-height: auto; }
-  .map{ height: 52vh; }
-  .kpis{ grid-template-columns: repeat(2, 1fr); }
-  .search{ width: min(420px, 60vw); }
-  .mobileOnly{ display:inline-flex; }
-  .left{ order:1; }
-  .center{ order:2; }
-  .right{ order:3; }
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
 
-  .left{
-    max-height: 64px;
-    overflow:hidden;
-    transition:max-height .25s ease;
-  }
-  .left.open{ max-height: 70vh; }
-}
+  <script src="app.js"></script>
+</body>
+</html>
