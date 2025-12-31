@@ -85,6 +85,122 @@ function fillYearSelect(yrs){
     selectedYear = Number(sel.value);
   }
 }
+function resetChartZoom(){
+  if (state.chartTemp?.resetZoom) state.chartTemp.resetZoom();
+  if (state.chartRain?.resetZoom) state.chartRain.resetZoom();
+}
+
+function ensureCharts(){
+  if (state.chartTemp && state.chartRain) return;
+
+  Chart.register(zoomPlugin);
+
+  // Temperatura
+  state.chartTemp = new Chart($('chartTemp'), {
+    type: 'line',
+    data: { labels: ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'], datasets: [] },
+    options: {
+      responsive:true,
+      maintainAspectRatio:false,
+      interaction:{ mode:'index', intersect:false },
+      plugins:{
+        legend:{ position:'top' },
+        zoom:{
+          zoom:{ wheel:{enabled:true}, pinch:{enabled:true}, mode:'x' },
+          pan:{ enabled:true, mode:'x' }
+        }
+      },
+      scales:{
+        y:{ title:{ display:true, text:'Temperatura (°C)' } }
+      }
+    }
+  });
+
+  // Precipitação
+  state.chartRain = new Chart($('chartRain'), {
+    type: 'bar',
+    data: { labels: ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'], datasets: [] },
+    options: {
+      responsive:true,
+      maintainAspectRatio:false,
+      interaction:{ mode:'index', intersect:false },
+      plugins:{
+        legend:{ position:'top' },
+        zoom:{
+          zoom:{ wheel:{enabled:true}, pinch:{enabled:true}, mode:'x' },
+          pan:{ enabled:true, mode:'x' }
+        }
+      },
+      scales:{
+        y:{ title:{ display:true, text:'Precipitação (mm)' } }
+      }
+    }
+  });
+
+  // duplo clique reseta zoom
+  $('chartTemp').addEventListener('dblclick', resetChartZoom);
+  $('chartRain').addEventListener('dblclick', resetChartZoom);
+}
+
+setCharts({
+  months: norm.months || ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'],
+  prec: norm.prec,
+  tmean: norm.tmean,
+  tmin: norm.tmin,
+  tmax: norm.tmax
+});
+   
+  // ===== Temperatura =====
+  state.chartTemp.data.labels = labels;
+  const dsT = [];
+
+  if (tmean?.length === 12){
+    dsT.push({ label:'T méd (°C)', data: tmean.map(Number), pointRadius:2, tension:0.25 });
+    const st = calcStats(tmean);
+    if (st){
+      dsT.push({
+        label:'T média anual',
+        data: Array(12).fill(st.mean),
+        pointRadius:0,
+        borderDash:[6,4],
+        tension:0
+      });
+    }
+  }
+  if (tmax?.length === 12){
+    dsT.push({ label:'T máx (°C)', data: tmax.map(Number), pointRadius:0, borderDash:[4,4], tension:0.25 });
+  }
+  if (tmin?.length === 12){
+    dsT.push({ label:'T mín (°C)', data: tmin.map(Number), pointRadius:0, borderDash:[4,4], tension:0.25 });
+  }
+
+  state.chartTemp.data.datasets = dsT;
+  state.chartTemp.update();
+
+  // ===== Precipitação =====
+  state.chartRain.data.labels = labels;
+  const dsR = [];
+
+  if (prec?.length === 12){
+    dsR.push({ type:'bar', label:'Precipitação (mm)', data: prec.map(v => Number(v)||0) });
+
+    const st = calcStats(prec);
+    if (st){
+      dsR.push({
+        type:'line',
+        label:'P média (mês)',
+        data: Array(12).fill(st.mean),
+        pointRadius:0,
+        borderDash:[6,4],
+        tension:0.2
+      });
+    }
+  }
+
+  state.chartRain.data.datasets = dsR;
+  state.chartRain.update();
+}
+
 
 /* -------- Stations list -------- */
 function stationLabel(s){
