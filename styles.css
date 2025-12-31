@@ -224,3 +224,24 @@ select{
   .panel.right{ order: 3; }
   .searchWrap input{ width: 52vw; min-width: 180px; }
 }
+.tabs{
+  display:flex;
+  gap:8px;
+  padding: 0 12px 10px;
+}
+.tab{
+  border:1px solid var(--line);
+  background:#fff;
+  color: var(--ink);
+  border-radius: 999px;
+  padding: 8px 12px;
+  cursor:pointer;
+  font-weight: 800;
+  font-size: 13px;
+}
+.tab.active{
+  border-color:#2b74ff;
+  box-shadow: 0 10px 24px rgba(43,116,255,.18);
+}
+.hidden{ display:none !important; }
+
