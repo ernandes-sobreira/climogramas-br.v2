@@ -1,65 +1,81 @@
 <!doctype html>
 <html lang="pt-br">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Transforma-Ação Climática — Climogramas do Brasil (INMET)</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Transforma-Ação Climática — Climogramas do Brasil</title>
 
-  <link rel="stylesheet" href="./styles.css"/>
+  <!-- CSS local (RAIZ) -->
+  <link rel="stylesheet" href="./styles.css" />
 
-  <!-- Leaflet + MarkerCluster (jsDelivr, estável) -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
+  <!-- Leaflet -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  />
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+    defer
+  ></script>
 
-  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+  <!-- MarkerCluster -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js" defer></script>
 
   <!-- Chart.js + Zoom -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js" defer></script>
+
+  <!-- App -->
+  <script src="./app.js" defer></script>
 </head>
 
 <body>
   <header class="topbar">
     <div class="brand">
-      <div class="dot"></div>
-      <div class="titles">
-        <div class="t1">Transforma-Ação Climática</div>
-        <div class="t2">Climogramas do Brasil • Elaborado por <b>Ernandes Sobreira</b> • Dados do INMET</div>
+      <span class="dot"></span>
+      <div>
+        <div class="title">Transforma-Ação Climática</div>
+        <div class="subtitle">Climogramas do Brasil • Elaborado por <b>Ernandes Sobreira</b> • Dados do INMET</div>
       </div>
     </div>
 
     <div class="controls">
+      <button class="btn ghost mobileOnly" id="toggleStations">Abrir</button>
+
       <div class="searchWrap">
-        <input id="q" class="search" placeholder="Buscar estação (nome, UF, id)..." />
-        <button id="clearSearch" class="iconBtn" title="Limpar">×</button>
+        <input id="q" class="input" type="search" placeholder="Buscar estação (nome, UF, id)..." />
+        <button class="iconBtn" id="clearSearch" title="Limpar">×</button>
       </div>
 
-      <select id="yearSelect" class="select"></select>
+      <select id="yearSelect" class="select" title="Ano"></select>
 
-      <select id="extraVar" class="select">
+      <select id="extraVar" class="select" title="Variável extra">
         <option value="">(sem variável extra)</option>
       </select>
 
-      <button id="btnPng" class="btn primary">Exportar PNG</button>
-      <button id="btnCsv" class="btn">Exportar CSV</button>
-      <button id="btnAll" class="btn ghost">Mostrar todas</button>
+      <button class="btn primary" id="btnPng">Exportar PNG</button>
+      <button class="btn" id="btnCsv">Exportar CSV</button>
+      <button class="btn" id="btnAll">Mostrar todas</button>
 
-      <span id="statusPill" class="pill">Carregando…</span>
+      <div class="statusPill" id="statusPill">Carregando…</div>
     </div>
   </header>
 
   <main class="layout">
     <!-- LEFT -->
-    <aside id="leftPanel" class="panel left">
+    <aside class="panel left" id="leftPanel">
       <div class="panelHead">
         <div>
-          <div class="h">Estações</div>
-          <div class="sub"><span id="stationCount">—</span> estações</div>
+          <div class="panelTitle">Estações</div>
+          <div class="muted"><span id="stationCount">—</span> estações</div>
         </div>
-
-        <button id="toggleStations" class="btn small ghost mobileOnly">Abrir</button>
+        <button class="btn ghost" id="btnFocus">Focar</button>
       </div>
 
       <div class="hint">
@@ -70,71 +86,89 @@
         </ul>
       </div>
 
-      <div id="stationList" class="list"></div>
+      <div class="list" id="stationList"></div>
     </aside>
 
     <!-- CENTER -->
     <section class="panel center">
       <div class="panelHead">
-        <div class="h">Mapa</div>
-        <div class="sub">Clique nos pontos para selecionar</div>
+        <div>
+          <div class="panelTitle">Mapa</div>
+          <div class="muted">Clique nos pontos para selecionar</div>
+        </div>
       </div>
       <div id="map" class="map"></div>
     </section>
 
     <!-- RIGHT -->
     <aside class="panel right">
-      <div class="panelHead rightHead">
+      <div class="panelHead">
         <div>
-          <div id="stationTitle" class="h">Selecione uma estação</div>
-          <div id="stationMeta" class="sub">—</div>
+          <div class="panelTitle" id="stationTitle">Selecione uma estação</div>
+          <div class="muted" id="stationMeta">—</div>
         </div>
-        <button id="btnResetZoom" class="btn small">Reset zoom</button>
+        <button class="btn ghost" id="btnResetAll">Reset zoom</button>
       </div>
 
       <div class="kpis">
-        <div class="kpi"><div class="k">T mín (ano)</div><div id="kTmin" class="v">—</div></div>
-        <div class="kpi"><div class="k">T méd (ano)</div><div id="kTmean" class="v">—</div></div>
-        <div class="kpi"><div class="k">T máx (ano)</div><div id="kTmax" class="v">—</div></div>
-        <div class="kpi"><div class="k">Chuva total</div><div id="kPtotal" class="v">—</div></div>
+        <div class="kpi">
+          <div class="kpiLabel">T mín (ano)</div>
+          <div class="kpiValue" id="kTmin">—</div>
+        </div>
+        <div class="kpi">
+          <div class="kpiLabel">T méd (ano)</div>
+          <div class="kpiValue" id="kTmean">—</div>
+        </div>
+        <div class="kpi">
+          <div class="kpiLabel">T máx (ano)</div>
+          <div class="kpiValue" id="kTmax">—</div>
+        </div>
+        <div class="kpi">
+          <div class="kpiLabel">Chuva total</div>
+          <div class="kpiValue" id="kPtotal">—</div>
+        </div>
 
-        <div class="kpi"><div class="k">Chuva méd (mês)</div><div id="kPmean" class="v">—</div></div>
-        <div class="kpi"><div class="k">Chuva máx (mês)</div><div id="kPmax" class="v">—</div></div>
-        <div class="kpi"><div class="k">Chuva mín (mês)</div><div id="kPmin" class="v">—</div></div>
-        <div class="kpi"><div class="k">Anos disponíveis</div><div id="kYears" class="v">—</div></div>
+        <div class="kpi">
+          <div class="kpiLabel">Chuva méd (mês)</div>
+          <div class="kpiValue" id="kPmean">—</div>
+        </div>
+        <div class="kpi">
+          <div class="kpiLabel">Chuva máx (mês)</div>
+          <div class="kpiValue" id="kPmax">—</div>
+        </div>
+        <div class="kpi">
+          <div class="kpiLabel">Chuva mín (mês)</div>
+          <div class="kpiValue" id="kPmin">—</div>
+        </div>
+        <div class="kpi">
+          <div class="kpiLabel">Anos disponíveis</div>
+          <div class="kpiValue" id="kYears">—</div>
+        </div>
       </div>
 
-      <div class="box">
-        <div class="boxTitle">Resumo climático</div>
+      <div class="card">
+        <div class="cardTitle">Resumo climático</div>
         <div id="summary" class="summary">Selecione uma estação para ver o climograma.</div>
       </div>
 
       <div class="tabs">
-        <button id="tabTemp" class="tab active">Temperatura</button>
-        <button id="tabRain" class="tab">Precipitação</button>
+        <button class="tab active" id="tabTemp">Temperatura</button>
+        <button class="tab" id="tabRain">Precipitação</button>
       </div>
 
       <div class="chartWrap">
-        <div id="chartBoxTemp" class="chartBox show">
+        <div class="chartPane active" id="paneTemp">
           <canvas id="chartTemp"></canvas>
         </div>
-        <div id="chartBoxRain" class="chartBox">
+        <div class="chartPane" id="paneRain">
           <canvas id="chartRain"></canvas>
         </div>
       </div>
 
-      <div class="footHint">Dica: no gráfico, use zoom e passe o mouse para ver valores (tooltips).</div>
+      <div class="footnote">
+        Dica: no gráfico, use zoom e passe o mouse para ver valores (tooltips).
+      </div>
     </aside>
   </main>
-
-  <div id="fatal" class="fatal hidden">
-    <div class="fatalCard">
-      <div class="fatalTitle">Erro ao iniciar</div>
-      <div id="fatalMsg" class="fatalMsg"></div>
-      <div class="fatalHint">Abra o Console (F12) para ver o detalhe técnico.</div>
-    </div>
-  </div>
-
-  <script src="./app.js"></script>
 </body>
 </html>
