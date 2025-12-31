@@ -1,168 +1,314 @@
-<!doctype html>
-<html lang="pt-br">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Transforma-Ação Climática — Climogramas do Brasil (INMET)</title>
+:root{
+  --bg: #eef3f6;
+  --panel: #ffffff;
+  --ink: #0b2230;
+  --muted: #4e6b75;
+  --brand: #0b6f75;
+  --brand2:#0b6f75;
+  --border: rgba(11,34,48,.10);
+  --shadow: 0 10px 35px rgba(11,34,48,.10);
+  --radius: 16px;
+}
 
-  <link rel="stylesheet" href="styles.css" />
+*{ box-sizing:border-box; }
+html,body{ height:100%; }
+body{
+  margin:0;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  overflow:hidden; /* IMPORTANT: não "cair" infinito */
+}
 
-  <!-- Leaflet + MarkerCluster -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
-</head>
+.topbar{
+  height: 64px;
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding: 10px 14px;
+  background: linear-gradient(180deg, rgba(11,111,117,1), rgba(11,111,117,.92));
+  color:#fff;
+  border-bottom: 1px solid rgba(255,255,255,.12);
+}
 
-<body>
-  <header class="topbar">
-    <div class="brand">
-      <div class="dot"></div>
-      <div class="brandText">
-        <div class="title">Transforma-Ação Climática</div>
-        <div class="subtitle">Climogramas do Brasil • Elaborado por <b>Ernandes Sobreira</b> • Dados do INMET</div>
-      </div>
-    </div>
+.brand{
+  display:flex; align-items:center; gap:10px;
+  min-width: 320px;
+}
+.dot{
+  width:10px; height:10px; border-radius:50%;
+  background: #7cf0d8;
+  box-shadow: 0 0 0 4px rgba(124,240,216,.15);
+}
+.brandText .title{ font-weight:800; letter-spacing:.2px; }
+.brandText .subtitle{ font-size:12px; opacity:.92; }
 
-    <div class="controls">
-      <div class="searchBox">
-        <input id="q" type="search" placeholder="Buscar estação (nome, UF, id)..." autocomplete="off" />
-        <button id="clearSearch" class="iconBtn" title="Limpar busca">×</button>
-      </div>
+.controls{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex:1;
+  justify-content:flex-end;
+  min-width: 0;
+}
 
-      <select id="yearSelect" class="select"></select>
+.searchBox{
+  display:flex; align-items:center;
+  background: rgba(255,255,255,.14);
+  border: 1px solid rgba(255,255,255,.20);
+  border-radius: 999px;
+  padding: 6px 10px;
+  min-width: 260px;
+  max-width: 420px;
+  flex: 1;
+}
+.searchBox input{
+  width:100%;
+  background: transparent;
+  border:0;
+  outline:0;
+  color:#fff;
+  font-size: 13px;
+}
+.searchBox input::placeholder{ color: rgba(255,255,255,.75); }
 
-      <select id="extraVar" class="select" title="Variável extra (se existir nos JSONs)">
-        <option value="">(sem variável extra)</option>
-        <option value="rh">Umidade relativa (média)</option>
-        <option value="rad">Radiação global (média)</option>
-        <option value="press">Pressão (média)</option>
-        <option value="wind">Vento (média)</option>
-      </select>
+.iconBtn{
+  width:26px; height:26px;
+  border-radius: 999px;
+  border: 0;
+  cursor: pointer;
+  background: rgba(255,255,255,.18);
+  color: #fff;
+  font-weight: 800;
+}
 
-      <button id="btnPng" class="btn primary">Exportar PNG</button>
-      <button id="btnCsv" class="btn">Exportar CSV</button>
-      <button id="btnAll" class="btn ghost">Mostrar todas</button>
+.select{
+  height: 34px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.22);
+  background: rgba(255,255,255,.14);
+  color:#fff;
+  padding: 0 10px;
+  font-size: 13px;
+  outline: none;
+}
 
-      <div id="statusPill" class="status">Carregando…</div>
-      <button id="toggleStations" class="btn ghost mobileOnly">Abrir</button>
-    </div>
-  </header>
+.btn{
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.22);
+  background: rgba(255,255,255,.14);
+  color:#fff;
+  cursor:pointer;
+  font-weight: 700;
+  font-size: 13px;
+}
+.btn:hover{ filter: brightness(1.05); }
 
-  <main class="layout">
-    <!-- LEFT: Stations -->
-    <aside id="leftPanel" class="panel left">
-      <div class="panelHead">
-        <div>
-          <div class="h">Estações</div>
-          <div class="small"><span id="stationCount">—</span> estações</div>
-        </div>
-        <button id="btnFocus" class="btn ghost">Focar</button>
-      </div>
+.btn.primary{
+  background: #1d4ed8;
+  border-color: rgba(255,255,255,.25);
+}
+.btn.ghost{
+  background: rgba(255,255,255,.10);
+}
 
-      <div class="hint">
-        <ul>
-          <li>Clique numa estação (lista) ou no ponto do mapa.</li>
-          <li>Zoom no gráfico (scroll/pinch) para ver detalhes.</li>
-          <li>Duplo-clique no gráfico ou “Reset zoom”.</li>
-        </ul>
-      </div>
+.status{
+  height: 30px;
+  display:flex;
+  align-items:center;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.12);
+  border: 1px solid rgba(255,255,255,.18);
+  font-size: 12px;
+  white-space: nowrap;
+}
 
-      <div id="stationList" class="list"></div>
-    </aside>
+.layout{
+  height: calc(100% - 64px);
+  display:grid;
+  grid-template-columns: 330px 1fr 420px;
+  gap: 12px;
+  padding: 12px;
+}
 
-    <!-- CENTER: Map -->
-    <section class="panel center">
-      <div class="panelHead">
-        <div>
-          <div class="h">Mapa</div>
-          <div class="small">Clique nos pontos para selecionar</div>
-        </div>
-        <div class="pill" id="mapPill">—</div>
-      </div>
-      <div id="map" class="map"></div>
-    </section>
+.panel{
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+  min-height: 0; /* important */
+}
 
-    <!-- RIGHT: Details -->
-    <aside class="panel right">
-      <div class="panelHead">
-        <div>
-          <div id="stationTitle" class="h">Selecione uma estação</div>
-          <div id="stationMeta" class="small">—</div>
-        </div>
-        <button id="btnResetZoom" class="btn ghost">Reset zoom</button>
-      </div>
+.panelHead{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap: 10px;
+  padding: 12px 12px 10px;
+  border-bottom: 1px solid var(--border);
+}
 
-      <div class="kpis">
-        <div class="kpi">
-          <div class="k">T mín (ano)</div>
-          <div class="v" id="kTmin">—</div>
-        </div>
-        <div class="kpi">
-          <div class="k">T méd (ano)</div>
-          <div class="v" id="kTmean">—</div>
-        </div>
-        <div class="kpi">
-          <div class="k">T máx (ano)</div>
-          <div class="v" id="kTmax">—</div>
-        </div>
-        <div class="kpi">
-          <div class="k">Chuva total</div>
-          <div class="v" id="kPtotal">—</div>
-        </div>
+.h{ font-size: 14px; font-weight: 900; }
+.h2{ font-size: 13px; font-weight: 900; margin-bottom: 6px; }
+.small{ font-size: 12px; color: var(--muted); }
 
-        <div class="kpi">
-          <div class="k">Chuva méd (mês)</div>
-          <div class="v" id="kPmean">—</div>
-        </div>
-        <div class="kpi">
-          <div class="k">Chuva máx (mês)</div>
-          <div class="v" id="kPmax">—</div>
-        </div>
-        <div class="kpi">
-          <div class="k">Chuva mín (mês)</div>
-          <div class="v" id="kPmin">—</div>
-        </div>
-        <div class="kpi">
-          <div class="k">Anos disponíveis</div>
-          <div class="v" id="kYears">—</div>
-        </div>
-      </div>
+.pill{
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(11,111,117,.25);
+  background: rgba(11,111,117,.10);
+  color: var(--brand2);
+  white-space: nowrap;
+}
 
-      <div class="summaryCard">
-        <div class="h2">Resumo climático</div>
-        <div id="summary" class="summaryText">Selecione uma estação para ver o climograma.</div>
-      </div>
+.left .hint{
+  padding: 10px 12px;
+  color: var(--muted);
+  font-size: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.left .hint ul{ margin:0; padding-left: 16px; }
+.left .hint li{ margin: 6px 0; }
 
-      <div class="tabs">
-        <button class="tab active" data-tab="temp">Temperatura</button>
-        <button class="tab" data-tab="prec">Precipitação</button>
-      </div>
+.list{
+  padding: 10px;
+  overflow:auto;
+  min-height: 0;
+}
 
-      <div class="chartWrap">
-        <div id="tab-temp" class="tabPane active">
-          <div class="chartBox">
-            <canvas id="chartTemp"></canvas>
-          </div>
-          <div class="foot">Dica: use zoom no gráfico para ver valores (tooltips).</div>
-        </div>
+.item{
+  border: 1px solid rgba(11,34,48,.10);
+  border-radius: 14px;
+  padding: 10px 10px;
+  margin-bottom: 10px;
+  cursor:pointer;
+  transition: .12s;
+  background: #fff;
+}
+.item:hover{ transform: translateY(-1px); box-shadow: 0 8px 18px rgba(11,34,48,.08); }
+.item.active{
+  border-color: rgba(29,78,216,.40);
+  box-shadow: 0 10px 22px rgba(29,78,216,.12);
+}
+.item .name{ font-weight: 900; font-size: 13px; }
+.item .meta{
+  margin-top: 4px;
+  display:flex;
+  justify-content:space-between;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
 
-        <div id="tab-prec" class="tabPane">
-          <div class="chartBox">
-            <canvas id="chartPrec"></canvas>
-          </div>
-          <div class="foot">Dica: use zoom no gráfico para ver valores (tooltips).</div>
-        </div>
-      </div>
-    </aside>
-  </main>
+.map{ flex:1; min-height: 0; }
 
-  <!-- libs -->
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+.right{
+  overflow:hidden;
+}
+.right .kpis{
+  display:grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  padding: 12px;
+}
+.kpi{
+  border: 1px solid rgba(11,34,48,.10);
+  border-radius: 14px;
+  padding: 10px;
+  background: #fff;
+}
+.kpi .k{
+  font-size: 11px;
+  color: var(--muted);
+}
+.kpi .v{
+  font-size: 13px;
+  font-weight: 900;
+  margin-top: 3px;
+}
 
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+.summaryCard{
+  margin: 0 12px 10px;
+  border: 1px solid rgba(11,34,48,.10);
+  border-radius: 14px;
+  padding: 10px;
+  background: #fff;
+}
+.summaryText{
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.35;
+}
 
-  <script src="app.js"></script>
-</body>
-</html>
+.tabs{
+  display:flex;
+  gap:8px;
+  padding: 0 12px 10px;
+}
+.tab{
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(11,34,48,.12);
+  background: rgba(11,34,48,.04);
+  cursor:pointer;
+  font-weight: 800;
+  font-size: 12px;
+}
+.tab.active{
+  background: rgba(29,78,216,.12);
+  border-color: rgba(29,78,216,.30);
+  color: #1d4ed8;
+}
+
+.chartWrap{
+  padding: 0 12px 12px;
+  overflow:auto;
+  min-height: 0;
+}
+
+.tabPane{ display:none; }
+.tabPane.active{ display:block; }
+
+.chartBox{
+  height: 360px;  /* FIXO — não cai infinito */
+  border: 1px solid rgba(11,34,48,.10);
+  border-radius: 14px;
+  padding: 10px;
+  background: #fff;
+}
+.foot{
+  font-size: 12px;
+  color: var(--muted);
+  padding: 8px 2px 0;
+}
+
+/* Mobile */
+.mobileOnly{ display:none; }
+@media (max-width: 1100px){
+  .layout{ grid-template-columns: 1fr; }
+  .center{ order: 1; }
+  .right{ order: 2; }
+  .left{
+    position: fixed;
+    z-index: 50;
+    top: 70px;
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    display:none;
+  }
+  .left.open{ display:flex; }
+  .mobileOnly{ display:inline-flex; }
+  body{ overflow:auto; }
+  .layout{ height: auto; }
+  .map{ height: 52vh; }
+  .right .kpis{ grid-template-columns: repeat(2, 1fr); }
+}
