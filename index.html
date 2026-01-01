@@ -1,140 +1,494 @@
-<!doctype html>
-<html lang="pt-br">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>clima cac — Climograma</title>
-  <link rel="stylesheet" href="assets/style.css" />
+const STORAGE_KEY = "curso_oratoria_aluno_v1";
 
-  <!-- Libs (CDN) -->
-  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-</head>
-<body>
-  <header class="topbar">
-    <div class="brand">
-      <div class="logo">clima<span>cac</span></div>
-      <div class="subtitle">Estes são os dados da Estação Meteorológica de Cáceres, UNEMAT - Pantanal Norte.</div>
-    </div>
-    <div class="pill" id="dataRangePill">Carregue um CSV para ver o período disponível</div>
-  </header>
+const RUBRIC_ITEMS = [
+  "Clareza da mensagem (entendi em 15s?)",
+  "Estrutura (começo, transições, fechamento)",
+  "Ritmo e pausas (controle)",
+  "Voz e dicção (ênfase, variedade)",
+  "Presença (olhar, postura, mãos)",
+  "Storytelling (concretude, virada)",
+  "Credibilidade (dados, limites, honestidade)",
+  "Impacto (o que a pessoa faz depois?)"
+];
 
-  <main class="layout">
-    <section class="card controls">
-      <h2>Configuração</h2>
+const DEFAULT_COURSE = {
+  version: 1,
+  totalHours: 20,
+  preferences: {
+    theme: "acadêmico + Pantanal + policy makers + extensão + sala de aula",
+    sessionMinutes: 45,
+    deliveryPerLesson: true
+  },
+  lessons: buildLessons()
+};
 
-      <div class="grid">
-        <div class="field">
-          <label>Fonte de dados</label>
-          <div class="row">
-            <input id="csvUrl" type="url" placeholder="Cole a URL do CSV (GitHub raw / link direto)" />
-            <button class="btn" id="loadUrlBtn">Carregar URL</button>
-          </div>
-          <div class="row">
-            <input id="csvFile" type="file" accept=".csv,text/csv" />
-            <button class="btn ghost" id="loadFileBtn">Carregar arquivo</button>
-          </div>
-          <div class="hint">
-            Dica: no GitHub Pages, use um CSV dentro de <code>assets/data/</code> e carregue por “URL local”.
-          </div>
-          <div class="row">
-            <button class="btn small" id="loadLocalBtn">Carregar CSV local (assets/data/climacac-1.csv)</button>
-            <button class="btn small ghost" id="resetBtn">Reset</button>
-          </div>
-        </div>
+function buildLessons(){
+  // 24 aulas + 2 avaliações (aulas especiais)
+  const L = [];
+  const add = (id, title, focus, steps, deliverables, links=[]) => {
+    L.push({ id, title, minutes: 45, focus, steps, deliverables, links });
+  };
 
-        <div class="field">
-          <label>Coluna de data</label>
-          <select id="dateCol"></select>
-          <div class="hint">Aceita datas tipo <b>DD/MM/YYYY</b>, <b>YYYY-MM-DD</b> e variações comuns.</div>
-        </div>
+  add("a1","Aula 1 — Diagnóstico (vídeo 2 min)","Base: como você soa hoje",
+    [
+      "Grave 2 min: 'Pantanal 2026' para leigos (sem roteiro).",
+      "Grave 2 min: mesma ideia para policy makers (com decisão).",
+      "Assista e anote: 3 pontos fortes + 3 pontos fracos."
+    ],
+    ["2 vídeos curtos (leigo/policy)", "Lista 3 fortes + 3 fracos"]
+  );
 
-        <div class="field">
-          <label>Coluna de temperatura (°C)</label>
-          <select id="tempCol"></select>
-          <div class="hint">Ex.: <code>Temperatura (oC)</code></div>
-        </div>
+  add("a2","Aula 2 — Mensagem 12s/45s/2min","Clareza brutal",
+    [
+      "Escreva sua mensagem em 12s (1 frase com verbo forte).",
+      "Escreva em 45s (problema → por que importa → o que você faz).",
+      "Escreva em 2 min com 1 exemplo do Pantanal/UNEMAT."
+    ],
+    ["Texto 12s/45s/2min", "Gravação 45s"]
+  );
 
-        <div class="field">
-          <label>Coluna de precipitação (mm)</label>
-          <select id="rainCol"></select>
-          <div class="hint">Ex.: <code>Precipitação (mm)</code></div>
-        </div>
+  add("a3","Aula 3 — Estrutura (início–meio–fim)","Parar de falar em espiral",
+    [
+      "Escolha um tema (ex.: restauração e saúde).",
+      "Faça 3 blocos: (1) por que importa, (2) evidência, (3) caminho.",
+      "Grave 3 min seguindo os blocos, sem improvisar demais."
+    ],
+    ["Roteiro 3 blocos", "Áudio/vídeo 3 min"]
+  );
 
-        <div class="field">
-          <label>Agregação</label>
-          <select id="agg">
-            <option value="day">Diária</option>
-            <option value="month" selected>Mensal</option>
-            <option value="year">Anual</option>
-          </select>
-          <div class="hint">Climograma clássico costuma ser <b>mensal</b>.</div>
-        </div>
+  add("a4","Aula 4 — Pausas que dão autoridade","Controle de ritmo",
+    [
+      "Pegue seu roteiro (a3) e marque pausas: / curto e // longo.",
+      "Regrave 2 min focando em pausas e ênfase.",
+      "Anote: onde você correu? onde pausou demais?"
+    ],
+    ["Roteiro com pausas", "Vídeo 2 min com pausas"]
+  );
 
-        <div class="field">
-          <label>Período</label>
-          <div class="row">
-            <input id="startDate" type="date" />
-            <span class="sep">→</span>
-            <input id="endDate" type="date" />
-          </div>
-          <div class="row">
-            <label class="check">
-              <input type="checkbox" id="showStd" checked />
-              <span>Mostrar faixa de desvio padrão</span>
-            </label>
-          </div>
-          <div class="row">
-            <label class="check">
-              <input type="checkbox" id="showMinMax" checked />
-              <span>Mostrar mín/máx</span>
-            </label>
-          </div>
-        </div>
+  add("a5","Aula 5 — Voz e energia sem exagero","Variação de ritmo e tom",
+    [
+      "Treine 3 versões do mesmo trecho (30s): neutro, mais lento, mais enérgico.",
+      "Escolha a melhor e grave 1 min com variação intencional.",
+      "Checklist: volume, articulação, final de frase."
+    ],
+    ["Vídeo 1 min (melhor versão)", "Checklist preenchido"]
+  );
 
-        <div class="field">
-          <label>Ações</label>
-          <div class="row wrap">
-            <button class="btn primary" id="renderBtn">Gerar climograma</button>
-            <button class="btn" id="downloadPngBtn" disabled>Baixar PNG</button>
-            <button class="btn" id="downloadCsvBtn" disabled>Baixar CSV (agregado)</button>
-          </div>
-          <div class="hint" id="statusHint">Pronto.</div>
-        </div>
-      </div>
-    </section>
+  add("a6","Aula 6 — Presença (olhar, mãos, postura)","Parecer seguro sem pose",
+    [
+      "Grave 60s em pé, olhando para a câmera (lente).",
+      "Refaça com mãos visíveis (gestos simples).",
+      "Anote 2 ajustes de postura e 1 de mãos."
+    ],
+    ["2 vídeos 60s (antes/depois)", "Notas de ajustes"]
+  );
 
-    <section class="card viz">
-      <div class="vizHead">
-        <h2>Climograma</h2>
-        <div class="meta" id="metaLine">—</div>
-      </div>
+  add("a7","Aula 7 — História curta (personagem–conflito–virada)","Story real do seu universo",
+    [
+      "Escolha 1 história real (campo, aluno, extensão).",
+      "Escreva em 8 linhas: personagem, conflito, virada, aprendizado.",
+      "Conte em 90s sem detalhes inúteis."
+    ],
+    ["História em 8 linhas", "Áudio 90s"]
+  );
 
-      <div class="chartWrap">
-        <canvas id="climoChart"></canvas>
-      </div>
+  add("a8","Aula 8 — Contraste (o que é vs o que poderia ser)","Talk de impacto",
+    [
+      "Faça 2 parágrafos: 'realidade' e 'futuro possível'.",
+      "Insira 1 dado forte (sem exagerar).",
+      "Grave 2 min: realidade → futuro → ação."
+    ],
+    ["Texto contraste", "Vídeo 2 min"]
+  );
 
-      <div class="tableWrap">
-        <h3>Tabela agregada (prévia)</h3>
-        <div class="tableScroller">
-          <table id="previewTable">
-            <thead></thead>
-            <tbody></tbody>
-          </table>
-        </div>
-      </div>
-    </section>
-  </main>
+  add("a9","Aula 9 — Metáforas do Pantanal (repertório)","Ser lembrado",
+    [
+      "Crie 5 metáforas (água, fogo, pulso, cheia/vazante, veredas).",
+      "Escolha 2 e encaixe no seu talk (a8).",
+      "Grave 90s usando 1 metáfora com naturalidade."
+    ],
+    ["Lista 5 metáforas", "Vídeo 90s com metáfora"]
+  );
 
-  <footer class="footer">
-    <div>
-      <b>clima cac</b> • feito para rodar leve no GitHub Pages • sem backend
-    </div>
-    <div class="muted">
-      Se algo “não aparece”, 99% das vezes é: caminho errado, CSV com separador diferente, ou nome de coluna diferente.
-    </div>
-  </footer>
+  add("a10","Aula 10 — Emoção com rigor","Humanizar sem perder ciência",
+    [
+      "Escreva 3 frases humanas (impacto em pessoas) + 3 frases técnicas (evidência).",
+      "Monte um parágrafo misturando as duas (equilíbrio).",
+      "Grave 2 min e veja se ficou 'crível'."
+    ],
+    ["Parágrafo equilibrado", "Vídeo 2 min"]
+  );
 
-  <script src="assets/app.js"></script>
-</body>
-</html>
+  add("a11","Aula 11 — Fechamentos memoráveis","Fechar com sentido",
+    [
+      "Crie 3 fechamentos: (1) pergunta, (2) convite, (3) frase-marca.",
+      "Teste em voz alta e escolha 1.",
+      "Grave 60s só com o final (pra lapidar)."
+    ],
+    ["3 fechamentos escritos", "Vídeo 60s (final escolhido)"]
+  );
+
+  add("a12","Aula 12 — Storyboard do talk (6–8 min)","Montar a espinha dorsal",
+    [
+      "Defina: abertura (história/dado/pergunta).",
+      "Defina 3 blocos do meio.",
+      "Defina o fechamento (a11)."
+    ],
+    ["Storyboard (tópicos)", "Tempo estimado por bloco"]
+  );
+
+  // Avaliação 1 (60 min)
+  L.push({
+    id:"av1",
+    title:"AVALIAÇÃO 1 — Talk 6–8 min (gravado)",
+    minutes:60,
+    focus:"Primeiro salto de nível (estrutura + ritmo + clareza)",
+    steps:[
+      "Grave seu talk completo (6–8 min).",
+      "Assista e preencha a rubrica (0–10).",
+      "Escreva 10 linhas: o que você corrigiria na próxima versão."
+    ],
+    deliverables:["Vídeo 6–8 min", "Rubrica preenchida", "Auto-crítica (10 linhas)"],
+    links:[]
+  });
+
+  // Aula 13–24 (mais compactas, mantendo o essencial)
+  add("a13","Aula 13 — Aula universitária em 3 atos","Plano de 50 min",
+    ["Monte 3 blocos de 15 min + 5 min final.", "Crie 1 gancho inicial (30s).", "Defina 1 mini-atividade (5 min)."],
+    ["Plano de aula (tópicos)", "Gancho escrito (30s)"]
+  );
+
+  add("a14","Aula 14 — Explicar o difícil sem jargão","Didática avançada",
+    ["Pegue 1 conceito difícil seu.", "Explique em 5 frases sem jargão.", "Depois explique em 5 frases técnicas."],
+    ["Duas versões (leigo/técnico)"]
+  );
+
+  add("a15","Aula 15 — Perguntas que ensinam","Avaliação formativa",
+    ["Crie 6 perguntas: 2 fáceis, 2 médias, 2 difíceis.", "Crie 1 pergunta que revela compreensão.", "Teste na fala."],
+    ["Lista de 6 perguntas + objetivo"]
+  );
+
+  add("a16","Aula 16 — Feedback rápido que não humilha","Professor influente",
+    ["Escreva 3 modelos de feedback (elogio específico).", "Escreva 3 correções (próximo passo).", "Monte 1 frase ‘ponte’."],
+    ["Modelos de feedback (6) + frase ponte"]
+  );
+
+  add("a17","Aula 17 — Slides que guiam","Menos texto, mais direção",
+    ["Pegue uma palestra sua.", "Reduza para 10–12 slides.", "Dê título assertivo para cada slide."],
+    ["Roteiro de slides (títulos)"]
+  );
+
+  add("a18","Aula 18 — Um gráfico = uma decisão","Data storytelling",
+    ["Escolha 1 gráfico real.", "Escreva a mensagem em 1 frase.", "Corte tudo que não serve à mensagem."],
+    ["Frase-mensagem + checklist de cortes"]
+  );
+
+  add("a19","Aula 19 — Slide para policy makers","Risco → opção → ação",
+    ["Monte 1 slide com: problema, risco, ação.", "Treine 60s explicando esse slide.", "Refine o texto do título."],
+    ["1 slide (descrição) + áudio 60s"]
+  );
+
+  add("a20","Aula 20 — Ensaios com tempo","Dominar relógio",
+    ["Ensaiar 2 vezes cronometrado.", "Cortar 15% do texto mantendo o sentido.", "Reensaiar."],
+    ["Tempo 1 / tempo 2 + o que cortou"]
+  );
+
+  add("a21","Aula 21 — Perguntas difíceis","Responder com direção",
+    ["Liste 10 perguntas que você teme.", "Responda 3 (25s cada).", "Treine ‘repita → responda → direcione’."],
+    ["Lista 10 perguntas + 3 respostas curtas"]
+  );
+
+  add("a22","Aula 22 — Improviso com estrutura","Não se perder falando",
+    ["Escolha 3 temas aleatórios.", "Fale 60s usando 3 blocos.", "Grave e avalie clareza."],
+    ["3 áudios de 60s"]
+  );
+
+  add("a23","Aula 23 — Talk 8 min para extensão/mídia","Sem jargão, com impacto",
+    ["Reescreva seu talk para leigos.", "Inclua 1 história + 1 dado + 1 convite.", "Grave 8 min."],
+    ["Vídeo 8 min"]
+  );
+
+  add("a24","Aula 24 — Roteiro final 12–15 min","Capstone pronto",
+    ["Defina abertura, 3 blocos e fechamento.", "Mapeie o tempo por bloco.", "Ensaiar 1 vez cronometrado."],
+    ["Roteiro final + tempos"]
+  );
+
+  // Avaliação 2 (60 min)
+  L.push({
+    id:"av2",
+    title:"AVALIAÇÃO 2 — Talk 12–15 min + slides (gravado)",
+    minutes:60,
+    focus:"Talk principal repetível (padrão de excelência)",
+    steps:[
+      "Grave o talk completo (12–15 min).",
+      "Preencha a rubrica (0–10) e escreva 1 página de ajustes.",
+      "Defina a ‘versão 2’: o que você vai melhorar no próximo ensaio?"
+    ],
+    deliverables:["Vídeo 12–15 min", "Rubrica preenchida", "Plano de ajustes (1 página)"],
+    links:[]
+  });
+
+  return L;
+}
+
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw) return { course: DEFAULT_COURSE, completed:{}, notes:{}, deliveries:{}, rubric:{}, selected:null, todayPick:null };
+    const s = JSON.parse(raw);
+    return {
+      course: s.course?.lessons ? s.course : DEFAULT_COURSE,
+      completed: s.completed || {},
+      notes: s.notes || {},
+      deliveries: s.deliveries || {},
+      rubric: s.rubric || {},
+      selected: s.selected || null,
+      todayPick: s.todayPick || null
+    };
+  }catch{
+    return { course: DEFAULT_COURSE, completed:{}, notes:{}, deliveries:{}, rubric:{}, selected:null, todayPick:null };
+  }
+}
+function saveState(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+
+let state = loadState();
+const el = (id)=>document.getElementById(id);
+
+function totals(){
+  const totalLessons = state.course.lessons.length;
+  const doneLessons = Object.values(state.completed).filter(Boolean).length;
+  const pct = totalLessons ? Math.round((doneLessons/totalLessons)*100) : 0;
+  const hours = state.course.totalHours || 20;
+  const hoursDone = totalLessons ? Math.round((doneLessons/totalLessons)*hours*10)/10 : 0;
+  return { totalLessons, doneLessons, pct, hours, hoursDone };
+}
+
+function pickToday(){
+  // escolhe a primeira não concluída; se todas concluídas, pega a última
+  const lessons = state.course.lessons;
+  const next = lessons.find(l => !state.completed[l.id]) || lessons[lessons.length-1];
+  state.todayPick = next.id;
+  saveState();
+}
+
+function renderToday(){
+  if(!state.todayPick) pickToday();
+  const lesson = state.course.lessons.find(l=>l.id===state.todayPick);
+  if(!lesson) return;
+  el("todayBox").innerHTML = `
+    <div style="font-weight:900">${lesson.title}</div>
+    <div class="small muted">${lesson.minutes} min • Foco: ${lesson.focus}</div>
+    <div class="small muted">${state.completed[lesson.id] ? "✅ Concluída" : "⏳ Pendente"}</div>
+  `;
+}
+
+function renderSidebar(){
+  const t = totals();
+  el("progressFill").style.width = `${t.pct}%`;
+  el("progressText").textContent = `${t.pct}%`;
+  el("hoursText").textContent = `${t.hoursDone}/${t.hours}h`;
+  el("pillDone").textContent = `${t.doneLessons} concluídas`;
+  el("pillTotal").textContent = `${t.totalLessons} aulas`;
+
+  const list = el("lessonList");
+  list.innerHTML = "";
+  state.course.lessons.forEach((l)=>{
+    const div = document.createElement("div");
+    div.className = "module" + (state.selected===l.id ? " active":"");
+    div.onclick = ()=>{
+      state.selected = l.id; saveState(); renderAll();
+    };
+    div.innerHTML = `
+      <div class="m-title">${state.completed[l.id] ? "✅ " : ""}${l.title}</div>
+      <div class="m-meta">${l.minutes} min • ${l.focus}</div>
+    `;
+    list.appendChild(div);
+  });
+}
+
+function renderRubric(lessonId){
+  const wrap = el("rubric");
+  wrap.innerHTML = "";
+  const scores = state.rubric[lessonId] || {};
+  RUBRIC_ITEMS.forEach((name, idx)=>{
+    const item = document.createElement("div");
+    item.className="item";
+    item.textContent = name;
+    const input = document.createElement("input");
+    input.type="number"; input.min="0"; input.max="10"; input.step="1";
+    input.value = (scores[idx] ?? "");
+    input.onchange = ()=> {
+      const v = input.value === "" ? "" : Math.max(0, Math.min(10, Number(input.value)));
+      state.rubric[lessonId] = state.rubric[lessonId] || {};
+      state.rubric[lessonId][idx] = v;
+      saveState();
+    };
+    wrap.appendChild(item);
+    wrap.appendChild(input);
+  });
+}
+
+function renderLesson(){
+  const lesson = state.course.lessons.find(l=>l.id===state.selected);
+  if(!lesson){
+    el("curTitle").textContent = "Selecione uma aula";
+    el("curMeta").textContent = "—";
+    el("curDesc").textContent = "Use 'Aula de hoje' para seguir no automático.";
+    el("stepList").innerHTML = "";
+    el("deliverableList").innerHTML = "";
+    el("notes").value = "";
+    return;
+  }
+
+  el("curTitle").textContent = lesson.title;
+  el("curMeta").textContent = `${lesson.minutes} min • Foco: ${lesson.focus}`;
+  el("curDesc").textContent = state.completed[lesson.id]
+    ? "✅ Concluída. Se quiser, refaça e compare evolução."
+    : "⏳ Faça os passos, registre a entrega e feche com autoavaliação.";
+
+  const steps = el("stepList");
+  steps.innerHTML = "";
+  (lesson.steps||[]).forEach((s)=>{
+    const row = document.createElement("div");
+    row.className="task";
+    row.innerHTML = `<input type="checkbox" />
+      <div><div class="t-title">${s}</div><div class="t-desc">Faça com cronômetro. Sem perfeccionismo.</div></div>`;
+    steps.appendChild(row);
+  });
+
+  const dWrap = el("deliverableList");
+  dWrap.innerHTML = "";
+  (lesson.deliverables||[]).forEach((d)=>{
+    const div = document.createElement("div");
+    div.className="deliverable";
+    div.textContent = d;
+    dWrap.appendChild(div);
+  });
+
+  el("notes").value = state.notes[lesson.id] || "";
+  el("deliverableLink").value = state.deliveries[lesson.id] || "";
+  el("deliverySaved").textContent = "";
+  el("notesSaved").textContent = "";
+  el("rubricSaved").textContent = "";
+
+  renderRubric(lesson.id);
+}
+
+function exportAll(){
+  const payload = {
+    exportedAt: new Date().toISOString(),
+    version: 1,
+    state
+  };
+  const blob = new Blob([JSON.stringify(payload,null,2)], {type:"application/json;charset=utf-8"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "meu_curso_oratoria_progresso.json";
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function importAll(txt){
+  const parsed = JSON.parse(txt);
+  if(!parsed?.state) throw new Error("JSON inválido (faltou state).");
+  state = parsed.state;
+  saveState();
+  renderAll();
+}
+
+function renderAll(){
+  if(!state.selected){
+    // seleciona aula de hoje por padrão
+    if(!state.todayPick) pickToday();
+    state.selected = state.todayPick;
+  }
+  renderToday();
+  renderSidebar();
+  renderLesson();
+}
+
+document.addEventListener("DOMContentLoaded", ()=>{
+  // aula de hoje
+  el("btnStartToday").onclick = ()=>{
+    if(!state.todayPick) pickToday();
+    state.selected = state.todayPick;
+    saveState(); renderAll();
+  };
+  el("btnPickAnother").onclick = ()=>{
+    // pega próxima não concluída após a atual (ou a primeira)
+    const lessons = state.course.lessons;
+    const idx = lessons.findIndex(l=>l.id===state.todayPick);
+    let next = null;
+    for(let i=idx+1;i<lessons.length;i++){
+      if(!state.completed[lessons[i].id]){ next=lessons[i]; break; }
+    }
+    if(!next) next = lessons.find(l=>!state.completed[l.id]) || lessons[0];
+    state.todayPick = next.id;
+    saveState(); renderAll();
+  };
+
+  el("btnSaveNotes").onclick = ()=>{
+    const lesson = state.course.lessons.find(l=>l.id===state.selected);
+    if(!lesson) return;
+    state.notes[lesson.id] = el("notes").value;
+    saveState();
+    el("notesSaved").textContent = "Notas salvas ✓";
+    setTimeout(()=>el("notesSaved").textContent="", 1200);
+  };
+
+  el("btnSaveDelivery").onclick = ()=>{
+    const lesson = state.course.lessons.find(l=>l.id===state.selected);
+    if(!lesson) return;
+    state.deliveries[lesson.id] = el("deliverableLink").value.trim();
+    // se tem entrega, marca aula como concluída (você pode desmarcar no JSON se quiser)
+    if(state.deliveries[lesson.id]) state.completed[lesson.id] = true;
+    // atualiza aula de hoje (próxima pendente)
+    pickToday();
+    saveState();
+    el("deliverySaved").textContent = "Entrega salva ✓ (aula marcada como concluída)";
+    renderAll();
+  };
+
+  el("btnSaveRubric").onclick = ()=>{
+    el("rubricSaved").textContent = "Autoavaliação salva ✓";
+    setTimeout(()=>el("rubricSaved").textContent="", 1200);
+  };
+
+  el("btnExport").onclick = exportAll;
+
+  const importDlg = el("importDlg");
+  el("btnImport").onclick = ()=>{ el("importText").value=""; importDlg.showModal(); };
+  el("btnDoImport").onclick = (e)=>{
+    e.preventDefault();
+    try{ importAll(el("importText").value.trim()); importDlg.close(); }
+    catch(err){ alert("Falha ao importar: " + err.message); }
+  };
+
+  el("btnReset").onclick = ()=>{
+    if(!confirm("Zerar curso e progresso neste navegador?")) return;
+    localStorage.removeItem(STORAGE_KEY);
+    state = loadState();
+    saveState(); renderAll();
+  };
+
+  // editar curso
+  const editDlg = el("editDlg");
+  el("btnEditCourse").onclick = ()=>{
+    el("courseEditor").value = JSON.stringify(state.course, null, 2);
+    editDlg.showModal();
+  };
+  el("btnSaveCourse").onclick = (e)=>{
+    e.preventDefault();
+    try{
+      const next = JSON.parse(el("courseEditor").value);
+      if(!next.lessons || !Array.isArray(next.lessons)) throw new Error("Faltou lessons[].");
+      state.course = next;
+      // recalcula totalHours se quiser: mantém o que estiver no JSON
+      saveState(); renderAll(); editDlg.close();
+    }catch(err){
+      alert("Erro ao salvar: " + err.message);
+    }
+  };
+
+  renderAll();
+});
