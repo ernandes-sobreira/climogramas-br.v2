@@ -903,7 +903,17 @@ async function render(){
     const ys = pts.map(p=>p.y);
 
     // tendência
-    const trend = buildTrend(xs, ys);
+    let trend = buildTrend(xs, ys);
+
+// fallback automático se o modelo escolhido falhar
+let trendNote = "";
+if (!trend) {
+  const old = trendModel.value;
+  trendModel.value = "linear";
+  trend = buildTrend(xs, ys);
+  trendModel.value = old;
+  trendNote = " (fallback: linear)";
+}
 
     // linha (amostra)
     let lineData = [];
@@ -970,9 +980,9 @@ async function render(){
     });
 
     const r2Txt = (showR2.checked && Number.isFinite(r2)) ? ` • R²=${fmt(r2,4)}` : "";
-    chartTitle.textContent = `Relação entre variáveis — ${stationLabel}`;
-    chartMeta.textContent = `${labelOfVar(V1)} vs ${labelOfVar(V2)} • pontos: ${pts.length}${r2Txt}`;
-    lastChartTitle = `relacao_${selectedStation.code}_${V1}_x_${V2}_${yearsOk[0]}_${yearsOk[yearsOk.length-1]}`;
+chartTitle.textContent = `Relação entre variáveis — ${stationLabel}`;
+chartMeta.textContent = `${labelOfVar(V1)} vs ${labelOfVar(V2)} • pontos: ${pts.length}${r2Txt}${trendNote}`;
+
 
     setKpis([
       { k:"Pontos", v: String(pts.length) },
@@ -1019,9 +1029,21 @@ async function selectStation(code, panTo=false){
     setMsg("Pronto. Clique em “Gerar”.", "ok");
 
     // descobre variáveis (pega o primeiro ano útil)
-    const pack = await loadStationYear(s.code, okYears[0]);
-    const vars = discoverVariablesFromPack(pack);
-    populateVarSelects(vars);
+   // descobre variáveis olhando alguns anos úteis (não só o primeiro)
+const sampleYears = okYears.slice(0, Math.min(5, okYears.length));
+const keys = new Set();
+
+for (const y of sampleYears) {
+  try {
+    const pack = await loadStationYear(s.code, y);
+    const vs = discoverVariablesFromPack(pack);
+    for (const v of vs) keys.add(v);
+  } catch {}
+}
+
+const vars = Array.from(keys);
+vars.sort((a,b)=>labelOfVar(a).localeCompare(labelOfVar(b)));
+populateVarSelects(vars);
   }
 
   if (panTo && MAP) MAP.setView([s.lat, s.lon], 8, { animate:true });
