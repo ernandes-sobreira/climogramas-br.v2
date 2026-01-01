@@ -1,265 +1,163 @@
-:root{
-  --bg:#0b1220;
-  --panel:#0f1a2f;
-  --panel2:#121f39;
-  --text:#e9eefc;
-  --muted:#a9b6d6;
-  --line:#223257;
-  --accent:#6ee7ff;
-  --accent2:#a78bfa;
-  --good:#34d399;
-  --warn:#fbbf24;
-  --bad:#fb7185;
-  --shadow: 0 12px 30px rgba(0,0,0,.35);
-  --radius:18px;
-  --radius2:14px;
-  --pad:18px;
-  --pad2:14px;
-  --maxw: 1200px;
-  --font: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", "Helvetica Neue";
-}
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Climogramas BR • INMET (JSON)</title>
+  <link rel="stylesheet" href="style.css" />
 
-*{box-sizing:border-box}
-html,body{height:100%}
-body{
-  margin:0;
-  font-family:var(--font);
-  background: radial-gradient(1200px 800px at 20% -10%, rgba(110,231,255,.12), transparent 60%),
-              radial-gradient(900px 700px at 100% 0%, rgba(167,139,250,.12), transparent 55%),
-              var(--bg);
-  color:var(--text);
-}
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
 
-.topbar{
-  max-width:var(--maxw);
-  margin: 18px auto 0;
-  padding: 0 var(--pad);
-  display:flex;
-  align-items:flex-start;
-  justify-content:space-between;
-  gap:16px;
-}
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
 
-.brand{display:flex;flex-direction:column;gap:6px}
-.logo{
-  font-weight:900;
-  letter-spacing:.2px;
-  font-size:28px;
-}
-.logo span{color:var(--accent)}
-.subtitle{color:var(--muted); font-size:13px; max-width:720px; line-height:1.35}
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">climogramas<span>.br</span><small>v2</small></div>
+      <div class="subtitle">
+        Plataforma para explorar séries climáticas (INMET) a partir de JSON por estação/ano.
+        Temp e Prec em destaque, com opções extras quando disponíveis (pressão, radiação, vento, umidade...).
+      </div>
+    </div>
 
-.pill{
-  padding:10px 12px;
-  border:1px solid rgba(110,231,255,.25);
-  background: rgba(15,26,47,.65);
-  border-radius:999px;
-  font-size:12px;
-  color:var(--muted);
-  white-space:nowrap;
-}
+    <div class="statusPills">
+      <div class="pill" id="pillStation">Estação: —</div>
+      <div class="pill" id="pillYears">Anos: —</div>
+      <div class="pill" id="pillData">Dados: —</div>
+    </div>
+  </header>
 
-.layout{
-  max-width:var(--maxw);
-  margin: 14px auto 26px;
-  padding: 0 var(--pad);
-  display:grid;
-  grid-template-columns: 1fr 1.3fr;
-  gap:16px;
-}
+  <main class="layout">
+    <!-- LEFT: controls + map -->
+    <section class="panel left">
+      <div class="card">
+        <h2>Selecionar</h2>
 
-.card{
-  background: linear-gradient(180deg, rgba(18,31,57,.85), rgba(15,26,47,.85));
-  border: 1px solid rgba(255,255,255,.06);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  overflow:hidden;
-}
+        <div class="grid2">
+          <div class="field">
+            <label>UF</label>
+            <select id="ufSelect"></select>
+          </div>
 
-.controls{padding: var(--pad)}
-.viz{padding: var(--pad)}
+          <div class="field">
+            <label>Buscar estação</label>
+            <input id="searchStation" type="text" placeholder="Digite nome/código (ex: A001, BRASILIA...)" />
+          </div>
 
-h2{
-  margin:0 0 14px;
-  font-size:16px;
-  letter-spacing:.2px;
-}
-h3{
-  margin: 18px 0 10px;
-  font-size:14px;
-  color: var(--muted);
-}
+          <div class="field span2">
+            <label>Estação</label>
+            <select id="stationSelect"></select>
+            <div class="hint" id="stationHint">Clique no mapa ou escolha na lista.</div>
+          </div>
 
-.grid{
-  display:grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 14px;
-}
+          <div class="field">
+            <label>Ano inicial</label>
+            <select id="yearStart"></select>
+          </div>
 
-.field{
-  background: rgba(0,0,0,.12);
-  border: 1px solid rgba(255,255,255,.06);
-  border-radius: var(--radius2);
-  padding: var(--pad2);
-  min-height: 88px;
-}
+          <div class="field">
+            <label>Ano final</label>
+            <select id="yearEnd"></select>
+          </div>
 
-.field label{
-  display:block;
-  font-size:12px;
-  color: var(--muted);
-  margin-bottom: 8px;
-}
+          <div class="field span2">
+            <label>Nível de análise</label>
+            <div class="segmented">
+              <button class="seg on" id="tabMonthly">Climograma (média mensal)</button>
+              <button class="seg" id="tabAnnual">Série anual</button>
+              <button class="seg" id="tabMonthSeries">Mensal por ano</button>
+              <button class="seg" id="tabRelations">Relação entre variáveis</button>
+            </div>
+          </div>
 
-.row{
-  display:flex;
-  align-items:center;
-  gap:10px;
-}
+          <div class="field">
+            <label>Variável 1</label>
+            <select id="var1"></select>
+            <div class="hint">Usada no gráfico principal (e no scatter, se for o caso).</div>
+          </div>
 
-.row.wrap{flex-wrap:wrap}
+          <div class="field">
+            <label>Variável 2 (relações)</label>
+            <select id="var2"></select>
+            <div class="hint">Só aparece no modo “Relação”.</div>
+          </div>
 
-.sep{color:var(--muted); font-size:12px}
+          <div class="field span2">
+            <label>Opções</label>
+            <div class="checks">
+              <label class="check"><input type="checkbox" id="optMinMax" checked /> <span>Mostrar Mín/Máx (quando fizer sentido)</span></label>
+              <label class="check"><input type="checkbox" id="optMean" checked /> <span>Mostrar Média</span></label>
+              <label class="check"><input type="checkbox" id="optPrecBars" checked /> <span>Precipitação em barras (quando disponível)</span></label>
+            </div>
+          </div>
 
-input,select,button{
-  font-family:inherit;
-}
+          <div class="field span2">
+            <label>Ações</label>
+            <div class="actions">
+              <button class="btn primary" id="btnRender">Gerar</button>
+              <button class="btn" id="btnPNG" disabled>Baixar PNG</button>
+              <button class="btn" id="btnCSV" disabled>Baixar CSV</button>
+              <button class="btn ghost" id="btnReset">Reset</button>
+            </div>
+            <div class="hint" id="msg">Carregando base…</div>
+          </div>
+        </div>
+      </div>
 
-input[type="url"], input[type="date"], select{
-  width:100%;
-  padding:10px 10px;
-  border-radius: 12px;
-  border: 1px solid rgba(255,255,255,.08);
-  background: rgba(11,18,32,.8);
-  color: var(--text);
-  outline:none;
-}
+      <div class="card mapCard">
+        <div class="mapHead">
+          <h2>Mapa de estações</h2>
+          <div class="miniHint">Clique em um marcador para selecionar.</div>
+        </div>
+        <div id="map"></div>
+      </div>
+    </section>
 
-input[type="file"]{
-  width:100%;
-  color: var(--muted);
-}
+    <!-- RIGHT: charts + table -->
+    <section class="panel right">
+      <div class="card">
+        <div class="chartHead">
+          <div>
+            <h2 id="chartTitle">—</h2>
+            <div class="meta" id="chartMeta">—</div>
+          </div>
+          <div class="kpis" id="kpis"></div>
+        </div>
 
-.hint{
-  margin-top:8px;
-  font-size:12px;
-  color: var(--muted);
-  line-height:1.35;
-}
+        <div class="chartWrap">
+          <canvas id="chart"></canvas>
+        </div>
 
-code{
-  background: rgba(110,231,255,.08);
-  border: 1px solid rgba(110,231,255,.15);
-  padding:2px 6px;
-  border-radius: 10px;
-  color: var(--text);
-}
+        <div class="subCard" id="subPanel">
+          <!-- dynamic (scatter legend / correlation etc.) -->
+        </div>
 
-.btn{
-  padding:10px 12px;
-  border-radius: 12px;
-  border: 1px solid rgba(255,255,255,.10);
-  background: rgba(18,31,57,.8);
-  color: var(--text);
-  cursor:pointer;
-  transition: transform .06s ease, border-color .15s ease, background .15s ease;
-  white-space:nowrap;
-}
-.btn:hover{transform: translateY(-1px); border-color: rgba(110,231,255,.25)}
-.btn:active{transform: translateY(0px)}
-.btn.primary{
-  border-color: rgba(110,231,255,.45);
-  background: rgba(110,231,255,.10);
-}
-.btn.ghost{
-  background: rgba(0,0,0,.10);
-}
-.btn.small{padding:8px 10px; font-size:12px}
-.btn:disabled{opacity:.55; cursor:not-allowed; transform:none}
+        <div class="tableBlock">
+          <div class="tableHead">
+            <h3>Prévia da tabela</h3>
+            <div class="miniHint" id="tableHint">—</div>
+          </div>
+          <div class="tableScroll">
+            <table id="table">
+              <thead></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
 
-.check{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  margin-top: 6px;
-  color: var(--muted);
-  font-size:12px;
-}
+      </div>
+    </section>
+  </main>
 
-.vizHead{
-  display:flex;
-  align-items:flex-start;
-  justify-content:space-between;
-  gap:12px;
-  margin-bottom: 10px;
-}
-.meta{
-  color: var(--muted);
-  font-size:12px;
-  line-height:1.35;
-  text-align:right;
-}
+  <footer class="footer">
+    <div><b>climogramas-br.v2</b> • GitHub Pages • dados INMET transformados para JSON.</div>
+    <div class="muted">Se um município/estação não tiver ano/variável, a plataforma simplesmente ignora e segue.</div>
+  </footer>
 
-.chartWrap{
-  background: rgba(0,0,0,.14);
-  border: 1px solid rgba(255,255,255,.06);
-  border-radius: var(--radius2);
-  padding: 12px;
-  height: 420px;
-}
-.chartWrap canvas{width:100% !important; height:100% !important}
-
-.tableWrap{
-  margin-top: 14px;
-  background: rgba(0,0,0,.12);
-  border: 1px solid rgba(255,255,255,.06);
-  border-radius: var(--radius2);
-  padding: 12px;
-}
-
-.tableScroller{
-  overflow:auto;
-  max-height: 220px;
-  border-radius: 12px;
-  border: 1px solid rgba(255,255,255,.06);
-}
-table{
-  width:100%;
-  border-collapse:collapse;
-  font-size:12px;
-}
-thead th{
-  position:sticky; top:0;
-  background: rgba(15,26,47,.95);
-  color: var(--muted);
-  text-align:left;
-  padding:10px;
-  border-bottom: 1px solid rgba(255,255,255,.08);
-}
-tbody td{
-  padding:10px;
-  border-bottom: 1px solid rgba(255,255,255,.06);
-  color: var(--text);
-}
-tbody tr:hover td{
-  background: rgba(110,231,255,.05);
-}
-
-.footer{
-  max-width:var(--maxw);
-  margin: 0 auto 30px;
-  padding: 0 var(--pad);
-  display:flex;
-  justify-content:space-between;
-  gap:12px;
-  color: var(--muted);
-  font-size:12px;
-}
-.footer .muted{opacity:.9}
-
-@media (max-width: 980px){
-  .layout{grid-template-columns:1fr}
-  .pill{white-space:normal; text-align:right}
-  .grid{grid-template-columns:1fr}
-  .chartWrap{height: 360px}
-}
+  <script src="app.js"></script>
+</body>
+</html>
