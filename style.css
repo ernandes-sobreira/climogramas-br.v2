@@ -246,3 +246,126 @@ tbody td{
   font-size:11.5px;
   color:var(--muted);
 }
+/* ===== PATCH FINAL (mobile + modal + heatmap legend) ===== */
+
+/* Topbar com botão */
+.topActions{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+}
+.helpBtn{
+  border:1px solid rgba(255,255,255,.12);
+  background: rgba(7,11,22,.35);
+  color: rgba(255,255,255,.85);
+  padding: 10px 12px;
+  border-radius: 12px;
+  cursor:pointer;
+}
+.helpBtn:hover{ background: rgba(255,255,255,.06); }
+
+/* Heatmap legend fora do canvas, com espaçamento */
+.heatLegend{
+  margin: 10px 12px 14px 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255,255,255,.10);
+  border-radius: 14px;
+  background: rgba(7,11,22,.28);
+}
+.heatLegendRow{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+.heatLegendLabel{ opacity:.85; font-size:12px; }
+.heatLegendBar{
+  flex:1;
+  height: 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.12);
+}
+.heatLegendTicks{
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  margin-top:6px;
+  font-size:12px;
+  opacity:.85;
+}
+.heatLegendNote{
+  margin-top:6px;
+  font-size:12px;
+  opacity:.70;
+}
+
+/* Modal */
+.modalOverlay{
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.55);
+  display: none;
+  z-index: 9999;
+  padding: 18px;
+}
+.modalOverlay.open{ display:flex; }
+.modal{
+  width: min(920px, 100%);
+  margin: auto;
+  border-radius: 18px;
+  background: rgba(10, 16, 36, .96);
+  border: 1px solid rgba(255,255,255,.12);
+  box-shadow: 0 20px 70px rgba(0,0,0,.55);
+  overflow:hidden;
+}
+.modalHeader{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:16px;
+  padding: 16px 16px 10px 16px;
+  border-bottom: 1px solid rgba(255,255,255,.10);
+}
+.modalTitle{ font-size: 18px; font-weight: 700; color: rgba(255,255,255,.92); }
+.modalSub{ font-size: 13px; opacity:.8; margin-top: 4px; }
+.modalClose{
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.06);
+  color: rgba(255,255,255,.9);
+  border-radius: 12px;
+  padding: 8px 10px;
+  cursor:pointer;
+}
+.modalBody{
+  padding: 14px 16px 16px 16px;
+  color: rgba(255,255,255,.86);
+  line-height: 1.45;
+  max-height: min(72vh, 720px);
+  overflow:auto;
+}
+.modalBody h4{ margin: 14px 0 8px; }
+.modalBody ul, .modalBody ol{ margin: 8px 0 8px 18px; }
+.modalFoot{ margin-top: 14px; opacity:.78; }
+
+/* ===== Mobile: painel em cima, conteúdo embaixo (sem “tela sobre tela”) ===== */
+@media (max-width: 980px){
+  .layout{
+    display:block !important;
+  }
+  .panel{
+    position: static !important;
+    width: auto !important;
+    max-width: none !important;
+    margin: 10px 10px 0 10px;
+  }
+  .content{
+    width:auto !important;
+    margin: 10px !important;
+  }
+  #map{ height: 220px !important; }
+  .chartWrap{ height: 320px !important; }
+  .tableWrap{ max-height: 320px !important; }
+  .statusPills{ justify-content:flex-start !important; }
+}
+
