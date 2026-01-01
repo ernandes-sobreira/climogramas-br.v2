@@ -4,7 +4,16 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Climogramas BR • INMET (JSON)</title>
-  <link rel="stylesheet" href="style.css" />
+
+  <!-- Cache-bust (obrigatório no GH Pages quando você tá alterando muito) -->
+  <link rel="stylesheet" href="./style.css?v=20260101" />
+
+  <!-- Fallback mínimo: se o CSS falhar, o mapa e o gráfico não colapsam -->
+  <style>
+    #map{height:340px; width:100%; background:#0b1020;}
+    .chartWrap{height:440px}
+    .chartWrap canvas{width:100% !important; height:100% !important}
+  </style>
 
   <!-- Leaflet -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
@@ -32,7 +41,6 @@
   </header>
 
   <main class="layout">
-    <!-- LEFT: controls + map -->
     <section class="panel left">
       <div class="card">
         <h2>Selecionar</h2>
@@ -117,7 +125,6 @@
       </div>
     </section>
 
-    <!-- RIGHT: charts + table -->
     <section class="panel right">
       <div class="card">
         <div class="chartHead">
@@ -132,9 +139,7 @@
           <canvas id="chart"></canvas>
         </div>
 
-        <div class="subCard" id="subPanel">
-          <!-- dynamic (scatter legend / correlation etc.) -->
-        </div>
+        <div class="subCard" id="subPanel"></div>
 
         <div class="tableBlock">
           <div class="tableHead">
@@ -158,6 +163,7 @@
     <div class="muted">Se um município/estação não tiver ano/variável, a plataforma simplesmente ignora e segue.</div>
   </footer>
 
-  <script src="app.js"></script>
+  <!-- Cache-bust no JS também -->
+  <script src="./app.js?v=20260101"></script>
 </body>
 </html>
