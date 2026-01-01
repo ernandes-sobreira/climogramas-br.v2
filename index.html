@@ -27,10 +27,14 @@
       </div>
     </div>
 
-    <div class="statusPills">
-      <div class="pill" id="pillStation">Estação: —</div>
-      <div class="pill" id="pillYears">Anos: —</div>
-      <div class="pill" id="pillData">Dados: —</div>
+    <div class="topActions">
+      <button id="btnHelp" class="helpBtn" type="button" title="Como usar">Como usar</button>
+
+      <div class="statusPills">
+        <div class="pill" id="pillStation">Estação: —</div>
+        <div class="pill" id="pillYears">Anos: —</div>
+        <div class="pill" id="pillData">Dados: —</div>
+      </div>
     </div>
   </header>
 
@@ -143,20 +147,21 @@
 
         <div class="chartWrap">
           <canvas id="mainChart"></canvas>
+        </div>
 
-          <div class="heatLegend" id="heatLegend" style="display:none;">
-            <div class="heatLegendRow">
-              <span class="heatLegendLabel">Baixo</span>
-              <div class="heatLegendBar" id="heatLegendBar"></div>
-              <span class="heatLegendLabel">Alto</span>
-            </div>
-            <div class="heatLegendTicks">
-              <span id="heatMin">—</span>
-              <span id="heatMid">—</span>
-              <span id="heatMax">—</span>
-            </div>
-            <div class="heatLegendNote">Células cinza = sem dado.</div>
+        <!-- ✅ Legenda do heatmap AGORA FICA FORA DO GRÁFICO (embaixo) -->
+        <div class="heatLegend" id="heatLegend" style="display:none;">
+          <div class="heatLegendRow">
+            <span class="heatLegendLabel">Baixo</span>
+            <div class="heatLegendBar" id="heatLegendBar"></div>
+            <span class="heatLegendLabel">Alto</span>
           </div>
+          <div class="heatLegendTicks">
+            <span id="heatMin">—</span>
+            <span id="heatMid">—</span>
+            <span id="heatMax">—</span>
+          </div>
+          <div class="heatLegendNote">Células cinza = sem dado.</div>
         </div>
       </div>
 
@@ -179,5 +184,53 @@
       </div>
     </section>
   </main>
+
+  <!-- ✅ MODAL “Como usar” -->
+  <div class="modalOverlay" id="helpOverlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+      <div class="modalHeader">
+        <div>
+          <div class="modalTitle" id="helpTitle">Como usar esta plataforma</div>
+          <div class="modalSub">Leitura rápida, objetiva e feita para tomada de decisão.</div>
+        </div>
+        <button class="modalClose" id="btnHelpClose" type="button" aria-label="Fechar">✕</button>
+      </div>
+
+      <div class="modalBody">
+        <p>
+          Esta plataforma organiza séries climáticas do <b>INMET</b> por estação e período, ajudando em
+          <b>monitoramento</b>, <b>planejamento</b>, <b>gestão de risco</b> e <b>decisões técnicas</b>
+          (agricultura, recursos hídricos, saúde ambiental, infraestrutura e defesa civil).
+        </p>
+
+        <h4>Passo a passo (30 segundos)</h4>
+        <ol>
+          <li><b>Escolha a estação</b> (UF → estação ou busque pelo nome/código).</li>
+          <li><b>Defina o período</b> (ano inicial e ano final).</li>
+          <li><b>Selecione o nível de análise</b>:
+            <ul>
+              <li><b>Climograma:</b> comportamento médio por mês (com min/máx e barras de precipitação quando houver).</li>
+              <li><b>Série anual:</b> evolução ano a ano (com min/máx e precipitação anual em barras quando disponível).</li>
+              <li><b>Heatmap:</b> visão rápida de “anomalias” visuais (mês x ano), ótimo pra enxergar padrões.</li>
+              <li><b>Relação:</b> compara duas variáveis e ajusta tendência (linear/log/exp/polinomial) com R².</li>
+            </ul>
+          </li>
+          <li>Clique em <b>Gerar</b>.</li>
+          <li>Use <b>Baixar PNG</b> (figura) ou <b>Baixar CSV</b> (dados) para relatórios.</li>
+        </ol>
+
+        <h4>Dicas rápidas</h4>
+        <ul>
+          <li>Se a precipitação não aparecer, mude a “Variável 1” para <b>Precipitação (mm)</b>.</li>
+          <li>No Heatmap: <b>cinza</b> = sem dado; cores quentes = valores maiores no período.</li>
+          <li>No modo Relação: modelos “log” exigem <b>x &gt; 0</b> e “exp” exige <b>y &gt; 0</b>.</li>
+        </ul>
+
+        <p class="modalFoot">
+          Idealizado por <b>Ernandes Sobreira</b> · Dados INMET coletados em <b>dez/2025</b>.
+        </p>
+      </div>
+    </div>
+  </div>
 </body>
 </html>
