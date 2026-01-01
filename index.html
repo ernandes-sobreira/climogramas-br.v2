@@ -35,7 +35,6 @@
   </header>
 
   <main class="layout">
-    <!-- LEFT -->
     <aside class="panel">
       <h2>Selecionar</h2>
 
@@ -46,7 +45,7 @@
         </div>
         <div class="field">
           <label>Buscar estação</label>
-          <input id="searchStation" type="text" placeholder="Digite nome/código (ex: A001) e ENTER" />
+          <input id="searchStation" type="text" placeholder="Digite nome/código e ENTER" />
         </div>
       </div>
 
@@ -70,12 +69,12 @@
       <div class="field">
         <label>Nível de análise</label>
         <div class="modeRow">
-          <button class="modeBtn active" data-mode="clim" id="btnClim" type="button">Climograma (média mensal)</button>
-          <button class="modeBtn" data-mode="annual" id="btnAnnual" type="button">Série anual</button>
+          <button class="modeBtn active" data-mode="clim" type="button">Climograma (média mensal)</button>
+          <button class="modeBtn" data-mode="annual" type="button">Série anual</button>
         </div>
         <div class="modeRow">
-          <button class="modeBtn" data-mode="heatmap" id="btnHeatmap" type="button">Mensal por ano (heatmap)</button>
-          <button class="modeBtn" data-mode="rel" id="btnRel" type="button">Relação entre variáveis</button>
+          <button class="modeBtn" data-mode="heatmap" type="button">Mensal por ano (heatmap)</button>
+          <button class="modeBtn" data-mode="rel" type="button">Relação entre variáveis</button>
         </div>
       </div>
 
@@ -92,7 +91,6 @@
         </div>
       </div>
 
-      <!-- tendência / r2 (modo relação) -->
       <div class="field" id="trendBox">
         <label>Modelo de tendência (modo “Relação”)</label>
         <select id="trendModel">
@@ -124,7 +122,6 @@
 
       <div class="msg" id="msgBox">Pronto.</div>
 
-      <!-- MAPA -->
       <div class="miniCard">
         <div class="miniHeader">
           <div class="miniTitle">Mapa de estações</div>
@@ -134,7 +131,6 @@
       </div>
     </aside>
 
-    <!-- RIGHT -->
     <section class="content">
       <div class="card">
         <div class="cardHeader">
@@ -142,14 +138,12 @@
             <div class="cardTitle" id="chartTitle">—</div>
             <div class="cardMeta" id="chartMeta">—</div>
           </div>
-
           <div class="kpis" id="kpis"></div>
         </div>
 
         <div class="chartWrap">
           <canvas id="mainChart"></canvas>
 
-          <!-- Legenda do heatmap -->
           <div class="heatLegend" id="heatLegend" style="display:none;">
             <div class="heatLegendRow">
               <span class="heatLegendLabel">Baixo</span>
