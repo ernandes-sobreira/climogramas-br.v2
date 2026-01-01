@@ -233,3 +233,40 @@ tr:hover td{ background: rgba(86,242,255,.06); }
   background: rgba(11,16,32,.55);
 }
 .footer .muted{ opacity:.85; }
+
+/* Heatmap legend */
+.heatLegend{
+  margin-top:10px;
+  padding:10px 12px;
+  border-radius:12px;
+  border:1px solid var(--line);
+  background: rgba(18,28,58,.25);
+}
+.heatLegendRow{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap;
+}
+.heatLegendTitle{
+  font-weight:800;
+  font-size:12px;
+  color:var(--txt);
+}
+.heatLegendMinMax{
+  font-size:12px;
+  color:var(--muted);
+}
+.heatLegendBar{
+  margin-top:10px;
+  height:10px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.10);
+  background: linear-gradient(90deg,
+    rgba(86,242,255,.25),
+    rgba(167,139,250,.55),
+    rgba(251,113,133,.65)
+  );
+}
+.muted{ color:var(--muted); }
