@@ -93,14 +93,22 @@
       </div>
 
       <!-- tendência / r2 (modo relação) -->
-      <div class="checks" style="margin-top:8px;">
-        <label class="check"><input type="checkbox" id="showTrend" checked> Mostrar linha de tendência</label>
-        <label class="check"><input type="checkbox" id="showR2" checked> Mostrar R²</label>
+      <div class="field" id="trendBox">
+        <label>Modelo de tendência (modo “Relação”)</label>
+        <select id="trendModel">
+          <option value="linear">Linear</option>
+          <option value="log">Logarítmica</option>
+          <option value="exp">Exponencial</option>
+          <option value="poly2">Polinomial (grau 2)</option>
+          <option value="poly3">Polinomial (grau 3)</option>
+        </select>
+
+        <div class="checks" style="margin-top:8px;">
+          <label class="check"><input type="checkbox" id="showTrend" checked> Mostrar linha de tendência</label>
+          <label class="check"><input type="checkbox" id="showR2" checked> Mostrar R²</label>
+        </div>
       </div>
 
-      <div style="height:10px"></div>
-
-      <!-- opções gerais -->
       <div class="checks">
         <label class="check"><input type="checkbox" id="optMinMax" checked> Mostrar Min/Máx (quando fizer sentido)</label>
         <label class="check"><input type="checkbox" id="optMean" checked> Mostrar Média</label>
@@ -115,6 +123,15 @@
       </div>
 
       <div class="msg" id="msgBox">Pronto.</div>
+
+      <!-- MAPA NO CANTINHO (painel esquerdo) -->
+      <div class="miniCard">
+        <div class="miniHeader">
+          <div class="miniTitle">Mapa de estações</div>
+          <div class="miniMeta">Clique para selecionar.</div>
+        </div>
+        <div id="map"></div>
+      </div>
     </aside>
 
     <!-- RIGHT -->
@@ -131,17 +148,22 @@
 
         <div class="chartWrap">
           <canvas id="mainChart"></canvas>
-        </div>
-      </div>
 
-      <div class="card">
-        <div class="cardHeader">
-          <div>
-            <div class="cardTitle">Mapa de estações</div>
-            <div class="cardMeta">Clique em um marcador para selecionar.</div>
+          <!-- Legenda do heatmap (aparece só no modo heatmap) -->
+          <div class="heatLegend" id="heatLegend" style="display:none;">
+            <div class="heatLegendRow">
+              <span class="heatLegendLabel">Baixo</span>
+              <div class="heatLegendBar" id="heatLegendBar"></div>
+              <span class="heatLegendLabel">Alto</span>
+            </div>
+            <div class="heatLegendTicks">
+              <span id="heatMin">—</span>
+              <span id="heatMid">—</span>
+              <span id="heatMax">—</span>
+            </div>
+            <div class="heatLegendNote">Células cinza = sem dado.</div>
           </div>
         </div>
-        <div id="map"></div>
       </div>
 
       <div class="card">
