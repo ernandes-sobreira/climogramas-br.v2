@@ -719,17 +719,6 @@ async function render(){
 if (mode === "annual") {
   const rows = [];
 
-  // helper: checkbox "precipitação em barras" sem depender do nome JS
-  const barsEl =
-    document.getElementById("optBars") ||
-    document.getElementById("optBarsPrec") ||
-    document.getElementById("optPrecBars") ||
-    document.getElementById("optPBars") ||
-    document.getElementById("barsPrec") ||
-    document.getElementById("precBars");
-
-  const barsChecked = !!(barsEl && barsEl.checked);
-
   // 1) Estatística anual de V1 a partir dos meses
   for (const y of years) {
     const pack = packs.find(p => p.year === y);
@@ -747,9 +736,17 @@ if (mode === "annual") {
     });
   }
 
+  // se não tiver nada, avisa e sai
+  if (!rows.length) {
+    setTable([]);
+    enableDownloads(false);
+    setMsg("Sem dados no intervalo selecionado.", "err");
+    return;
+  }
+
   setTable(rows);
 
-  // 2) Detectar chave de precipitação automaticamente (sem hasVar/pickFirst)
+  // 2) Detecta automaticamente a chave da precipitação nos JSON da estação
   const PREC_KEYS = ["p", "prec", "prcp", "ppt", "precip", "precipitacao"];
   let PKEY = null;
 
@@ -763,7 +760,7 @@ if (mode === "annual") {
     }
   }
 
-  // 3) Precip anual = soma dos meses (se existir)
+  // 3) Precipitação anual = soma dos meses (se existir)
   let annualPrec = null;
   if (PKEY) {
     annualPrec = rows.map(r => {
@@ -777,7 +774,7 @@ if (mode === "annual") {
   const labels = rows.map(r => r.ano);
   const datasets = [];
 
-  // 4) Min/Max anual
+  // 4) Linhas min/max anuais
   if (optMinMax.checked) {
     datasets.push({
       type: "line",
@@ -800,7 +797,7 @@ if (mode === "annual") {
     });
   }
 
-  // 5) Média anual
+  // 5) Linha média anual
   if (optMean.checked) {
     datasets.push({
       type: "line",
@@ -813,8 +810,8 @@ if (mode === "annual") {
     });
   }
 
-  // 6) Barras de precipitação anual (eixo direito)
-  const showPrecBars = !!(barsChecked && annualPrec && annualPrec.some(Number.isFinite));
+  // 6) Barras de precipitação anual (eixo direito) — usando o ID certo: optPrecBars
+  const showPrecBars = !!(optPrecBars.checked && annualPrec && annualPrec.some(Number.isFinite));
 
   if (showPrecBars) {
     datasets.push({
@@ -827,7 +824,7 @@ if (mode === "annual") {
     });
   }
 
-  // 7) Render do chart anual com yP garantido
+  // 7) Render anual com eixo direito yP garantido
   if (chart) { chart.destroy(); chart = null; }
 
   chart = new Chart(ctx, {
@@ -877,14 +874,13 @@ if (mode === "annual") {
     { k: "Anos úteis", v: String(rows.filter(r => r.n > 0).length) },
     { k: "Média (anos)", v: fmt(meanFinite(rows.map(r => r.mean)), 2) },
     { k: "Min (ano)", v: fmt(minFinite(rows.map(r => r.min)), 2) },
-    { k: "Max (ano)", v: fmt(minFinite(rows.map(r => r.max)), 2) },
+    { k: "Max (ano)", v: fmt(maxFinite(rows.map(r => r.max)), 2) },
   ]);
 
   enableDownloads(true);
   setMsg("Pronto.", "ok");
   return;
 }
-
 
 
   // ====== MODO 3: Mensal por ano (HEATMAP) ======
