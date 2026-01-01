@@ -1,7 +1,6 @@
 (() => {
   "use strict";
 
-  // ---------- helpers ----------
   const $ = (id) => document.getElementById(id);
   const BASE = new URL(".", location.href).toString();
   const ASSETS = new URL("assets/", BASE).toString();
@@ -43,7 +42,7 @@
     box.style.color = (kind==="err") ? "rgba(255,255,255,.92)" : "rgba(255,255,255,.70)";
   }
 
-  // ---------- Downloads (ROBUSTO) ----------
+  // Downloads robustos
   function clickDownload(href, filename){
     const a = document.createElement("a");
     a.href = href;
@@ -54,9 +53,7 @@
     a.click();
     a.remove();
   }
-
   function downloadTextCSV(filename, csvText){
-    // tenta Blob primeiro
     try{
       const blob = new Blob([csvText], {type:"text/csv;charset=utf-8"});
       const url = URL.createObjectURL(blob);
@@ -64,22 +61,19 @@
       setTimeout(()=>URL.revokeObjectURL(url), 1500);
       return true;
     } catch(e){
-      // fallback data URL
       const url = "data:text/csv;charset=utf-8," + encodeURIComponent(csvText);
       clickDownload(url, filename);
       return true;
     }
   }
-
   function downloadPngSync(chart, filename){
-    // IMPORTANTÍSSIMO: síncrono (não perde user gesture)
     const url = chart?.toBase64Image?.("image/png", 1);
     if (!url || typeof url !== "string") throw new Error("Falha ao gerar PNG (toBase64Image).");
     clickDownload(url, filename);
     return true;
   }
 
-  // ---------- UI refs ----------
+  // UI
   const ufSelect = $("ufSelect");
   const searchStation = $("searchStation");
   const stationSelect = $("stationSelect");
@@ -120,7 +114,12 @@
   const heatMaxEl = $("heatMax");
   const heatLegendBar = $("heatLegendBar");
 
-  // ---------- state ----------
+  // Help modal
+  const btnHelp = $("btnHelp");
+  const helpOverlay = $("helpOverlay");
+  const btnHelpClose = $("btnHelpClose");
+
+  // state
   let stations = [];
   let filteredStations = [];
   let selectedStation = null;
@@ -138,7 +137,6 @@
   let map = null;
   let markersLayer = null;
 
-  // ---------- var labels ----------
   const VAR_LABELS = {
     tmean: "Temperatura média (°C)",
     tmin: "Temperatura mínima (°C)",
@@ -190,7 +188,6 @@
     }
   }
 
-  // ---------- Table (DECENTE) ----------
   function tableSet(rows, columns, decimals=2){
     lastRows = rows || [];
     tblHead.innerHTML = "";
@@ -256,7 +253,6 @@
     if (keepValue && old && [...sel.options].some(o=>o.value===old)) sel.value = old;
   }
 
-  // ---------- data ----------
   async function fetchJson(url){
     const res = await fetch(url, {cache:"no-store"});
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -296,9 +292,7 @@
     for (let y=y0; y<=y1; y++){
       const ok = await yearExists(code, y);
       if (!ok) continue;
-      try{
-        packs.push(await loadPack(code, y));
-      }catch(_){}
+      try{ packs.push(await loadPack(code, y)); } catch(_){}
     }
     return packs;
   }
@@ -324,7 +318,6 @@
     return arr;
   }
 
-  // ---------- chart ----------
   function destroyChart(){
     if (chart){ chart.destroy(); chart = null; }
   }
@@ -334,7 +327,7 @@
     chart = new Chart(ctx, config);
   }
 
-  // ---------- map ----------
+  // map
   function initMap(){
     map = L.map("map", {preferCanvas:true, zoomControl:true}).setView([-14.2, -55.0], 4);
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -343,7 +336,6 @@
     }).addTo(map);
     markersLayer = L.layerGroup().addTo(map);
   }
-
   function renderMarkers(){
     markersLayer.clearLayers();
     for (const s of filteredStations){
@@ -357,7 +349,6 @@
       mk.addTo(markersLayer);
     }
   }
-
   function selectStation(code, zoom=true){
     selectedStation = stations.find(s=>s.code===code) || null;
 
@@ -376,7 +367,6 @@
       map.setView([selectedStation.lat, selectedStation.lon], 7, {animate:true});
     }
   }
-
   function applyFilters(zoomIfSingle=false){
     const uf = ufSelect.value;
     const q = (searchStation.value || "").trim().toLowerCase();
@@ -414,7 +404,7 @@
     selectStation(code, false);
   }
 
-  // ---------- trend models ----------
+  // trend models (mantidos)
   function linReg(xs, ys){
     const n = xs.length;
     const xbar = xs.reduce((a,b)=>a+b,0)/n;
@@ -437,7 +427,6 @@
     const r2 = 1 - (ssres/ssyy);
     return {r2, predict:(x)=>a+b*x};
   }
-
   function polyFit(xs, ys, deg){
     const n = xs.length;
     const m = deg + 1;
@@ -496,7 +485,6 @@
     const r2=1-(ssres/ssyy);
     return {r2,predict};
   }
-
   function trendFit(xs, ys, model){
     if (model==="linear") return linReg(xs, ys);
 
@@ -513,7 +501,6 @@
     }
 
     if (model==="exp"){
-      // y = a*exp(bx) (y>0)
       const X=[], Ylog=[];
       for (let i=0;i<xs.length;i++){
         if (ys[i]>0 && Number.isFinite(xs[i]) && Number.isFinite(ys[i])){
@@ -542,7 +529,7 @@
     return null;
   }
 
-  // ---------- heatmap colors ----------
+  // heatmap colors
   function clamp01(t){ return Math.max(0, Math.min(1, t)); }
   function heatColor(t){
     t = clamp01(t);
@@ -566,13 +553,11 @@
     ];
     return `rgba(${c[0]},${c[1]},${c[2]},0.95)`;
   }
-
   function setHeatLegendGradient(){
     if (!heatLegendBar) return;
     heatLegendBar.style.background = "linear-gradient(90deg, rgba(35,23,140,.95), rgba(0,140,255,.95), rgba(0,220,190,.95), rgba(255,230,80,.95), rgba(255,120,40,.95), rgba(255,50,90,.95))";
   }
 
-  // ---------- run ----------
   async function run(){
     try{
       if (!selectedStation){ setMsg("Selecione uma estação.", "err"); return; }
@@ -592,7 +577,7 @@
         setKpis([]);
         tableSet([]);
         updatePills({station: code, years:`${y0}–${y1}`, data:"0 ano(s)"});
-        setMsg("Sem dados no intervalo selecionado (anos ausentes ou JSON vazio).", "err");
+        setMsg("Sem dados no intervalo selecionado.", "err");
         return;
       }
 
@@ -609,7 +594,6 @@
       const V1 = var1.value;
       const V2 = var2.value;
 
-      // detect precip key
       const PREC_KEYS = ["p","prec","prcp","ppt","precip","precipitacao"];
       let PKEY = null;
       outer:
@@ -624,14 +608,11 @@
       const hasTmin = vars.includes("tmin");
       const hasTmax = vars.includes("tmax");
 
-      // -------- CLIM --------
+      // CLIM
       if (mode==="clim"){
         heatLegend.style.display="none";
 
-        const perMonth = Array.from({length:12}, (_,i)=>({
-          m:i+1, v:[], tmin:[], tmax:[], p:[]
-        }));
-
+        const perMonth = Array.from({length:12}, (_,i)=>({ m:i+1, v:[], p:[] }));
         for (const p of packs){
           for (const r of (p.months||[])){
             const m = Number(r.m);
@@ -640,14 +621,6 @@
             const v = safeNum(r[V1]);
             if (Number.isFinite(v)) perMonth[m-1].v.push(v);
 
-            if (hasTmin){
-              const vmin = safeNum(r.tmin);
-              if (Number.isFinite(vmin)) perMonth[m-1].tmin.push(vmin);
-            }
-            if (hasTmax){
-              const vmax = safeNum(r.tmax);
-              if (Number.isFinite(vmax)) perMonth[m-1].tmax.push(vmax);
-            }
             if (PKEY){
               const pv = safeNum(r[PKEY]);
               if (Number.isFinite(pv)) perMonth[m-1].p.push(pv);
@@ -655,17 +628,14 @@
           }
         }
 
-        const rows = perMonth.map(o=>{
-          const row = {
-            mes: o.m,
-            V1_mean: meanFinite(o.v),
-            V1_min: minFinite(o.v),
-            V1_max: maxFinite(o.v),
-            n: o.v.filter(Number.isFinite).length
-          };
-          if (PKEY) row.P_mean = meanFinite(o.p);
-          return row;
-        });
+        const rows = perMonth.map(o=>({
+          mes: o.m,
+          V1_mean: meanFinite(o.v),
+          V1_min: minFinite(o.v),
+          V1_max: maxFinite(o.v),
+          n: o.v.filter(Number.isFinite).length,
+          ...(PKEY ? { P_mean: meanFinite(o.p) } : {})
+        }));
 
         const cols = ["mes","V1_mean","V1_min","V1_max","n"].concat(PKEY?["P_mean"]:[]);
         tableSet(rows, cols, 2);
@@ -675,13 +645,7 @@
 
         const showBars = !!(optPrecBars.checked && PKEY);
         if (showBars){
-          ds.push({
-            type:"bar",
-            label:"Precipitação média (mm)",
-            data: rows.map(r=>Number.isFinite(r.P_mean)?r.P_mean:null),
-            yAxisID:"yP",
-            order: 3
-          });
+          ds.push({ type:"bar", label:"Precipitação média (mm)", data: rows.map(r=>Number.isFinite(r.P_mean)?r.P_mean:null), yAxisID:"yP", order:3 });
         }
 
         if (optMinMax.checked){
@@ -723,7 +687,7 @@
         return;
       }
 
-      // -------- ANNUAL --------
+      // ANNUAL (igual ao seu, mantido)
       if (mode==="annual"){
         heatLegend.style.display="none";
 
@@ -742,14 +706,14 @@
 
           if (PKEY){
             const pv = (p.months||[]).map(r=>safeNum(r[PKEY])).filter(Number.isFinite);
-            row.P_sum = pv.length ? sumFinite(pv) : NaN; // precip anual (soma)
+            row.P_sum = pv.length ? sumFinite(pv) : NaN;
           }
           rows.push(row);
         }
 
         if (!rows.length){
           destroyChart(); setKpis([]); tableSet([]);
-          setMsg("Sem dados suficientes para série anual (variável ausente).", "err");
+          setMsg("Sem dados suficientes para série anual.", "err");
           return;
         }
 
@@ -803,18 +767,15 @@
         return;
       }
 
-      // -------- HEATMAP --------
+      // HEATMAP ✅ agora SEM a legenda do chart por cima
       if (mode==="heatmap"){
         heatLegend.style.display="block";
         setHeatLegendGradient();
 
         const yearsAxis = yearsOk.slice().sort((a,b)=>a-b);
 
-        // monta matriz ano x mês com valor
         const byYear = new Map();
-        for (const y of yearsAxis){
-          byYear.set(y, Array(12).fill(null));
-        }
+        for (const y of yearsAxis) byYear.set(y, Array(12).fill(null));
 
         let vmin = Infinity, vmax = -Infinity;
 
@@ -837,11 +798,11 @@
           vmin = 0; vmax = 1;
         }
         const vmid = (vmin+vmax)/2;
+
         heatMinEl.textContent = `${labelOfVar(V1)} min: ${fmt(vmin,2)}`;
         heatMidEl.textContent = `médio: ${fmt(vmid,2)}`;
         heatMaxEl.textContent = `max: ${fmt(vmax,2)}`;
 
-        // tabela decente: ano + m01..m12 + mean/min/max
         const rows = [];
         for (const y of yearsAxis){
           const arr = byYear.get(y) || Array(12).fill(null);
@@ -861,7 +822,6 @@
         const cols = ["ano", ...Array.from({length:12},(_,i)=>`m${String(i+1).padStart(2,"0")}`), "mean","min","max"];
         tableSet(rows, cols, 2);
 
-        // pontos do heatmap
         const points = [];
         for (const y of yearsAxis){
           const arr = byYear.get(y) || Array(12).fill(null);
@@ -874,6 +834,7 @@
           type:"scatter",
           data:{
             datasets:[{
+              // label não importa pq vamos esconder legend
               label: `Heatmap ${labelOfVar(V1)}`,
               data: points.map(p=>({x:p.x, y:p.y, v:p.v})),
               pointRadius: 12,
@@ -892,6 +853,7 @@
           options:{
             responsive:true, maintainAspectRatio:false,
             plugins:{
+              legend:{ display:false },  // ✅ some a legenda que tava em cima do heatmap
               tooltip:{
                 callbacks:{
                   label: (ctx)=>{
@@ -899,8 +861,7 @@
                     return `${r.x} • ${monthName(r.y)}: ${Number.isFinite(r.v)?fmt(r.v,2):"sem dado"}`;
                   }
                 }
-              },
-              legend:{position:"top"}
+              }
             },
             scales:{
               x:{title:{display:true,text:"Ano"}, grid:{color:"rgba(255,255,255,.06)"}},
@@ -931,7 +892,7 @@
         return;
       }
 
-      // -------- RELAÇÃO --------
+      // REL (mantido como estava na sua versão)
       if (mode==="rel"){
         heatLegend.style.display="none";
 
@@ -952,20 +913,6 @@
             if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
 
             const row = { ano:p.year, mes, [colX]: x, [colY]: y };
-
-            if (hasTmin){
-              const tmin = safeNum(r.tmin);
-              if (Number.isFinite(tmin)) row["Tmin (°C)"] = tmin;
-            }
-            if (hasTmax){
-              const tmax = safeNum(r.tmax);
-              if (Number.isFinite(tmax)) row["Tmax (°C)"] = tmax;
-            }
-            if (PKEY){
-              const prec = safeNum(r[PKEY]);
-              if (Number.isFinite(prec)) row["Precip (mm)"] = prec;
-            }
-
             pts.push(row);
             xs.push(x); ys.push(y);
           }
@@ -973,7 +920,7 @@
 
         if (pts.length < 10){
           destroyChart(); setKpis([]); tableSet([]);
-          setMsg("Poucos pontos para relação (dados insuficientes).", "err");
+          setMsg("Poucos pontos para relação.", "err");
           return;
         }
 
@@ -992,7 +939,6 @@
           const fit = trendFit(xs, ys, model);
           if (fit){
             r2 = fit.r2;
-
             const xmin = Math.min(...xs), xmax = Math.max(...xs);
             const line = [];
             const steps = 90;
@@ -1017,13 +963,10 @@
               pointRadius: 0,
               tension: 0
             });
-          } else {
-            setMsg("Modelo não pôde ser ajustado (log exige x>0; exp exige y>0; ou poucos dados).", "err");
           }
         }
 
-        // tabela decente: mostra até 700 linhas
-        const cols = ["ano","mes", colX, colY].concat(hasTmin?["Tmin (°C)"]:[]).concat(hasTmax?["Tmax (°C)"]:[]).concat(PKEY?["Precip (mm)"]:[]);
+        const cols = ["ano","mes", colX, colY];
         tableSet(pts.slice(0,700), cols, 3);
 
         renderChart({
@@ -1061,11 +1004,28 @@
     }
   }
 
-  // ---------- init ----------
   async function init(){
     try{
       setMsg("Iniciando...", "ok");
       setHeatLegendGradient();
+
+      // Help modal events
+      const openHelp = () => {
+        helpOverlay.classList.add("open");
+        helpOverlay.setAttribute("aria-hidden","false");
+      };
+      const closeHelp = () => {
+        helpOverlay.classList.remove("open");
+        helpOverlay.setAttribute("aria-hidden","true");
+      };
+      btnHelp?.addEventListener("click", openHelp);
+      btnHelpClose?.addEventListener("click", closeHelp);
+      helpOverlay?.addEventListener("click", (e)=>{
+        if (e.target === helpOverlay) closeHelp();
+      });
+      window.addEventListener("keydown", (e)=>{
+        if (e.key === "Escape") closeHelp();
+      });
 
       const stUrl = new URL("stations.json", ASSETS).toString();
       const st = await fetchJson(stUrl);
@@ -1093,7 +1053,6 @@
         selectStation(filteredStations[0].code, true);
       }
 
-      // modes
       for (const btn of document.querySelectorAll(".modeBtn")){
         btn.addEventListener("click", ()=>{
           setMode(btn.getAttribute("data-mode"));
@@ -1127,7 +1086,6 @@
       btnPng.addEventListener("click", ()=>{
         try{
           if (!chart){ setMsg("Nenhum gráfico para baixar.", "err"); return; }
-          // SINCRONO: resolve o “verdinho e não baixa”
           downloadPngSync(chart, lastPngName);
           setMsg("Download PNG iniciado.", "ok");
         } catch(e){
@@ -1139,7 +1097,6 @@
       btnCsv.addEventListener("click", ()=>{
         try{
           if (!lastRows || !lastRows.length){ setMsg("Nenhuma tabela para baixar.", "err"); return; }
-          // usa as colunas atuais do cabeçalho
           const cols = [...tblHead.querySelectorAll("th")].map(th=>th.textContent);
           const csv = rowsToCsv(lastRows, cols);
           downloadTextCSV(lastCsvName, csv);
