@@ -719,12 +719,12 @@ async function render(){
 if (mode === "annual") {
   const rows = [];
 
-  // 1) Calcula estatísticas anuais da variável V1 a partir dos meses
+  // 1) Estatística anual de V1 a partir dos meses
   for (const y of years) {
     const pack = packs.find(p => p.year === y);
     if (!pack) continue;
 
-    const vals = pack.months.map(r => r[V1]).filter(Number.isFinite);
+    const vals = (pack.months || []).map(r => r?.[V1]).filter(Number.isFinite);
 
     rows.push({
       ano: y,
@@ -738,25 +738,35 @@ if (mode === "annual") {
 
   setTable(rows);
 
-  // 2) Precipitação anual (se existir) — soma dos 12 meses do ano
-  let annualPrec = null;
+  // 2) Descobrir automaticamente a chave de precipitação disponível nos dados
+  const PREC_KEYS = ["p", "prec", "prcp", "ppt", "precip", "precipitacao"];
   let PKEY = null;
 
-  if (hasVar("p") || hasVar("prec") || hasVar("prcp") || hasVar("ppt")) {
-    PKEY = pickFirst(["p", "prec", "prcp", "ppt"]);
+  outer:
+  for (const pack of packs) {
+    for (const m of (pack.months || [])) {
+      if (!m || typeof m !== "object") continue;
+      for (const k of PREC_KEYS) {
+        if (k in m && Number.isFinite(m[k])) { PKEY = k; break outer; }
+      }
+    }
+  }
+
+  // 3) Precipitação anual = soma dos meses (se existir)
+  let annualPrec = null;
+  if (PKEY) {
     annualPrec = rows.map(r => {
       const pack = packs.find(p => p.year === r.ano);
       if (!pack) return null;
-      const pv = pack.months.map(m => m[PKEY]).filter(Number.isFinite);
-      // precip anual = soma dos meses válidos
-      return sumFinite(pv);
+      const pv = (pack.months || []).map(mm => mm?.[PKEY]).filter(Number.isFinite);
+      return pv.length ? sumFinite(pv) : null;
     });
   }
 
   const labels = rows.map(r => r.ano);
   const datasets = [];
 
-  // 3) Linhas de Min/Max anual (da V1)
+  // 4) Linhas min/max anuais
   if (optMinMax.checked) {
     datasets.push({
       type: "line",
@@ -779,7 +789,7 @@ if (mode === "annual") {
     });
   }
 
-  // 4) Linha de média anual (da V1)
+  // 5) Linha média anual
   if (optMean.checked) {
     datasets.push({
       type: "line",
@@ -792,8 +802,10 @@ if (mode === "annual") {
     });
   }
 
-  // 5) Barras de precipitação anual no eixo direito (se solicitado e se existir)
-  if (optBars.checked && annualPrec && annualPrec.some(Number.isFinite)) {
+  // 6) Barras de precipitação anual no eixo direito
+  const showPrecBars = !!(optBars && optBars.checked && annualPrec && annualPrec.some(Number.isFinite));
+
+  if (showPrecBars) {
     datasets.push({
       type: "bar",
       label: "Precipitação anual (mm)",
@@ -804,17 +816,11 @@ if (mode === "annual") {
     });
   }
 
-  // 6) Render do gráfico ANUAL (com eixo direito yP garantido)
-  if (chart) {
-    chart.destroy();
-    chart = null;
-  }
+  // 7) Render direto do Chart (garante eixo direito yP)
+  if (chart) { chart.destroy(); chart = null; }
 
   chart = new Chart(ctx, {
-    data: {
-      labels,
-      datasets
-    },
+    data: { labels, datasets },
     options: {
       responsive: true,
       maintainAspectRatio: false,
@@ -824,7 +830,7 @@ if (mode === "annual") {
         tooltip: {
           callbacks: {
             label: (c) => {
-              const lab = c.dataset.label || "";
+              const lab = c.dataset?.label || "";
               const v = c.parsed?.y;
               return `${lab}: ${Number.isFinite(v) ? fmt(v, 2) : "sem dado"}`;
             }
@@ -832,6 +838,11 @@ if (mode === "annual") {
         }
       },
       scales: {
+        x: {
+          title: { display: true, text: "Ano" },
+          ticks: { autoSkip: true, maxRotation: 0 },
+          grid: { color: "rgba(255,255,255,.06)" }
+        },
         y: {
           position: "left",
           title: { display: true, text: labelOfVar(V1) },
@@ -839,14 +850,9 @@ if (mode === "annual") {
         },
         yP: {
           position: "right",
-          display: (optBars.checked && annualPrec && annualPrec.some(Number.isFinite)),
-          title: { display: true, text: "Precipitação (mm)" },
+          display: showPrecBars,
+          title: { display: showPrecBars, text: "Precipitação (mm)" },
           grid: { drawOnChartArea: false }
-        },
-        x: {
-          title: { display: true, text: "Ano" },
-          ticks: { autoSkip: true, maxRotation: 0 },
-          grid: { color: "rgba(255,255,255,.06)" }
         }
       }
     }
