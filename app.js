@@ -1,583 +1,253 @@
-/* clima cac — app.js
-   - Lê CSV via URL / arquivo local
-   - Detecta colunas
-   - Agrega (dia/mês/ano)
-   - Climograma: precipitação (barras) + temperatura (linha)
-   - Opções: min/max e faixa de desvio padrão
-   - Download PNG e CSV agregado
-*/
-
-let RAW = [];
-let HEADERS = [];
-let chart = null;
-let aggregatedRows = [];
-
-const el = (id) => document.getElementById(id);
-
-const statusHint = el("statusHint");
-const dataRangePill = el("dataRangePill");
-
-const csvUrl = el("csvUrl");
-const csvFile = el("csvFile");
-
-const dateCol = el("dateCol");
-const tempCol = el("tempCol");
-const rainCol = el("rainCol");
-const agg = el("agg");
-
-const startDate = el("startDate");
-const endDate = el("endDate");
-const showStd = el("showStd");
-const showMinMax = el("showMinMax");
-
-const renderBtn = el("renderBtn");
-const downloadPngBtn = el("downloadPngBtn");
-const downloadCsvBtn = el("downloadCsvBtn");
-
-const metaLine = el("metaLine");
-const previewTable = el("previewTable");
-const previewHead = previewTable.querySelector("thead");
-const previewBody = previewTable.querySelector("tbody");
-
-function setStatus(msg, type="ok"){
-  statusHint.textContent = msg;
-  statusHint.style.color =
-    type === "bad" ? "rgb(251,113,133)" :
-    type === "warn" ? "rgb(251,191,36)" :
-    "rgba(169,182,214,1)";
+:root{
+  --bg:#0b1020;
+  --panel:#0f1730;
+  --panel2:#121e3d;
+  --line:rgba(255,255,255,.08);
+  --text:#e9eefc;
+  --muted:#aab6d6;
+  --accent:#56f2ff;
+  --accent2:#a78bfa;
+  --good:#34d399;
+  --warn:#fbbf24;
+  --bad:#fb7185;
+  --shadow:0 18px 40px rgba(0,0,0,.35);
+  --r:18px;
+  --r2:14px;
+  --p:18px;
+  --p2:14px;
+  --max:1280px;
+  --font: ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial,"Noto Sans","Helvetica Neue";
 }
 
-function normalizeHeader(h){
-  return String(h || "").trim();
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  font-family:var(--font);
+  color:var(--text);
+  background:
+    radial-gradient(900px 700px at 15% -10%, rgba(86,242,255,.12), transparent 60%),
+    radial-gradient(900px 700px at 100% 0%, rgba(167,139,250,.12), transparent 55%),
+    var(--bg);
 }
 
-function guessDateHeader(headers){
-  const candidates = headers.filter(h => /data|date|dia/i.test(h));
-  return candidates[0] || headers[0] || "";
+.topbar{
+  max-width:var(--max);
+  margin:18px auto 0;
+  padding:0 var(--p);
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:14px;
 }
 
-function guessTempHeader(headers){
-  // Você citou: "Temperatura (oC)" (sem °)
-  const prefs = [
-    "Temperatura (oC)",
-    "Temperatura (°C)",
-    "Temperatura",
-    "temp",
-    "temperature"
-  ];
-  for (const p of prefs){
-    const found = headers.find(h => h.toLowerCase() === p.toLowerCase());
-    if (found) return found;
-  }
-  return headers.find(h => /temp|temper/i.test(h)) || "";
+.brand{display:flex;flex-direction:column;gap:6px}
+.logo{
+  font-weight:900;
+  letter-spacing:.2px;
+  font-size:28px;
+}
+.logo span{color:var(--accent)}
+.logo small{font-size:12px; color:var(--muted); font-weight:700; margin-left:8px}
+.subtitle{max-width:760px; color:var(--muted); font-size:13px; line-height:1.35}
+
+.statusPills{display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end}
+.pill{
+  padding:10px 12px;
+  border-radius:999px;
+  background:rgba(15,23,48,.65);
+  border:1px solid rgba(86,242,255,.18);
+  color:var(--muted);
+  font-size:12px;
+  white-space:nowrap;
 }
 
-function guessRainHeader(headers){
-  const prefs = ["Precipitação (mm)", "Precipitacao (mm)", "Precipitação", "chuva", "rain", "precip"];
-  for (const p of prefs){
-    const found = headers.find(h => h.toLowerCase() === p.toLowerCase());
-    if (found) return found;
-  }
-  return headers.find(h => /precip|chuva|rain/i.test(h)) || "";
+.layout{
+  max-width:var(--max);
+  margin:14px auto 28px;
+  padding:0 var(--p);
+  display:grid;
+  grid-template-columns: 0.95fr 1.35fr;
+  gap:16px;
 }
 
-function fillSelect(selectEl, headers, preferred=""){
-  selectEl.innerHTML = "";
-  headers.forEach(h => {
-    const opt = document.createElement("option");
-    opt.value = h;
-    opt.textContent = h;
-    selectEl.appendChild(opt);
-  });
-  if (preferred && headers.includes(preferred)) selectEl.value = preferred;
+.panel{display:flex;flex-direction:column;gap:16px}
+
+.card{
+  background: linear-gradient(180deg, rgba(18,30,61,.85), rgba(15,23,48,.85));
+  border:1px solid var(--line);
+  border-radius:var(--r);
+  box-shadow:var(--shadow);
+  padding:var(--p);
+  overflow:hidden;
 }
 
-function parseNumber(v){
-  if (v === null || v === undefined) return NaN;
-  // aceita "12,3"
-  const s = String(v).trim().replace(/\./g, "").replace(",", ".");
-  const n = Number(s);
-  return Number.isFinite(n) ? n : NaN;
+h2{margin:0 0 14px; font-size:16px; letter-spacing:.2px}
+h3{margin:0; font-size:13px; color:var(--muted)}
+
+.grid2{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:14px;
+}
+.span2{grid-column:1 / -1}
+
+.field{
+  background: rgba(0,0,0,.14);
+  border:1px solid rgba(255,255,255,.06);
+  border-radius:var(--r2);
+  padding:var(--p2);
+}
+label{display:block; font-size:12px; color:var(--muted); margin-bottom:8px}
+
+input,select,button{font-family:inherit}
+
+input[type="text"], select{
+  width:100%;
+  padding:10px 10px;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,.10);
+  background:rgba(11,16,32,.85);
+  color:var(--text);
+  outline:none;
 }
 
-function parseDateSmart(v){
-  if (!v) return null;
-  const s = String(v).trim();
+.hint{margin-top:8px; font-size:12px; color:var(--muted); line-height:1.35}
 
-  // YYYY-MM-DD
-  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (m){
-    const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
-    return isNaN(d) ? null : d;
-  }
-
-  // DD/MM/YYYY or DD/MM/YY
-  m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
-  if (m){
-    let y = Number(m[3]);
-    if (y < 100) y += 2000;
-    const d = new Date(y, Number(m[2]) - 1, Number(m[1]));
-    return isNaN(d) ? null : d;
-  }
-
-  // fallback
-  const d = new Date(s);
-  return isNaN(d) ? null : d;
+.segmented{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+}
+.seg{
+  padding:9px 10px;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,.10);
+  background:rgba(0,0,0,.12);
+  color:var(--text);
+  cursor:pointer;
+}
+.seg.on{
+  border-color: rgba(86,242,255,.45);
+  background: rgba(86,242,255,.10);
 }
 
-function toISODate(d){
-  const y = d.getFullYear();
-  const m = String(d.getMonth()+1).padStart(2,"0");
-  const day = String(d.getDate()).padStart(2,"0");
-  return `${y}-${m}-${day}`;
+.checks{display:flex; flex-direction:column; gap:10px}
+.check{display:flex; align-items:center; gap:10px; color:var(--muted); font-size:12px}
+
+.actions{display:flex; gap:10px; flex-wrap:wrap}
+.btn{
+  padding:10px 12px;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,.12);
+  background: rgba(18,30,61,.75);
+  color:var(--text);
+  cursor:pointer;
+  transition: transform .06s ease, border-color .15s ease;
+  white-space:nowrap;
+}
+.btn:hover{transform: translateY(-1px); border-color: rgba(86,242,255,.25)}
+.btn:active{transform: translateY(0)}
+.btn.primary{
+  border-color: rgba(86,242,255,.45);
+  background: rgba(86,242,255,.12);
+}
+.btn.ghost{background: rgba(0,0,0,.10)}
+.btn:disabled{opacity:.55; cursor:not-allowed; transform:none}
+
+.mapCard{padding:0}
+.mapHead{
+  padding: var(--p);
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:10px;
+}
+.miniHint{color:var(--muted); font-size:12px}
+#map{height: 340px; width:100%}
+
+.chartHead{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  align-items:flex-start;
+  margin-bottom: 10px;
+}
+.meta{color:var(--muted); font-size:12px; line-height:1.35}
+.kpis{display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end}
+.kpi{
+  padding:10px 12px;
+  border-radius:14px;
+  background: rgba(0,0,0,.14);
+  border: 1px solid rgba(255,255,255,.06);
+  min-width: 150px;
+}
+.kpi .k{font-size:11px; color:var(--muted)}
+.kpi .v{font-size:16px; font-weight:900; margin-top:4px}
+
+.chartWrap{
+  background: rgba(0,0,0,.14);
+  border:1px solid rgba(255,255,255,.06);
+  border-radius:var(--r2);
+  padding:12px;
+  height: 440px;
+}
+.chartWrap canvas{width:100% !important; height:100% !important}
+
+.subCard{
+  margin-top:12px;
+  padding:12px;
+  border-radius:var(--r2);
+  border:1px solid rgba(255,255,255,.06);
+  background: rgba(0,0,0,.12);
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
 }
 
-function keyForAgg(d, mode){
-  const y = d.getFullYear();
-  const m = String(d.getMonth()+1).padStart(2,"0");
-  const day = String(d.getDate()).padStart(2,"0");
-  if (mode === "year") return `${y}`;
-  if (mode === "month") return `${y}-${m}`;
-  return `${y}-${m}-${day}`;
+.tableBlock{margin-top:14px}
+.tableHead{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-end;
+  gap:10px;
+  margin-bottom:10px;
 }
-
-function labelForAgg(key, mode){
-  if (mode === "year") return key;
-  if (mode === "month") return key; // YYYY-MM
-  return key; // YYYY-MM-DD
+.tableScroll{
+  overflow:auto;
+  max-height:260px;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,.06);
 }
-
-function computeStats(values){
-  const arr = values.filter(v => Number.isFinite(v));
-  const n = arr.length;
-  if (!n) return { n:0, mean:NaN, min:NaN, max:NaN, sd:NaN };
-  let sum = 0;
-  let min = arr[0], max = arr[0];
-  for (const v of arr){
-    sum += v;
-    if (v < min) min = v;
-    if (v > max) max = v;
-  }
-  const mean = sum / n;
-  let ss = 0;
-  for (const v of arr){
-    const dx = v - mean;
-    ss += dx * dx;
-  }
-  const sd = Math.sqrt(ss / n); // sd populacional (ok pra faixa visual)
-  return { n, mean, min, max, sd };
+table{width:100%; border-collapse:collapse; font-size:12px}
+thead th{
+  position:sticky; top:0;
+  background: rgba(15,23,48,.95);
+  color: var(--muted);
+  text-align:left;
+  padding:10px;
+  border-bottom: 1px solid rgba(255,255,255,.08);
 }
-
-function dateRangeFromRows(rows, dateKey){
-  let min = null, max = null;
-  for (const r of rows){
-    const d = parseDateSmart(r[dateKey]);
-    if (!d) continue;
-    if (!min || d < min) min = d;
-    if (!max || d > max) max = d;
-  }
-  return { min, max };
+tbody td{
+  padding:10px;
+  border-bottom:1px solid rgba(255,255,255,.06);
 }
+tbody tr:hover td{background: rgba(86,242,255,.05)}
 
-function buildAggregated(){
-  const dKey = dateCol.value;
-  const tKey = tempCol.value;
-  const rKey = rainCol.value;
-  const mode = agg.value;
-
-  const d0 = startDate.value ? new Date(startDate.value + "T00:00:00") : null;
-  const d1 = endDate.value ? new Date(endDate.value + "T23:59:59") : null;
-
-  const buckets = new Map();
-
-  for (const row of RAW){
-    const d = parseDateSmart(row[dKey]);
-    if (!d) continue;
-    if (d0 && d < d0) continue;
-    if (d1 && d > d1) continue;
-
-    const k = keyForAgg(d, mode);
-    if (!buckets.has(k)){
-      buckets.set(k, { temp:[], rain:[] });
-    }
-    const b = buckets.get(k);
-    b.temp.push(parseNumber(row[tKey]));
-    b.rain.push(parseNumber(row[rKey]));
-  }
-
-  const keys = Array.from(buckets.keys()).sort(); // YYYY-MM sort ok
-  const out = [];
-
-  for (const k of keys){
-    const b = buckets.get(k);
-    const ts = computeStats(b.temp);
-    const rs = computeStats(b.rain);
-
-    // Precipitação em climograma geralmente é soma no período
-    // Temperatura geralmente é média
-    // Min/Max e SD fazem sentido pra ambos.
-    const rainSum = b.rain.filter(Number.isFinite).reduce((a,v)=>a+v, 0);
-
-    out.push({
-      period: labelForAgg(k, mode),
-      temp_mean: ts.mean,
-      temp_min: ts.min,
-      temp_max: ts.max,
-      temp_sd: ts.sd,
-      rain_sum: rainSum,
-      rain_mean: rs.mean,
-      rain_min: rs.min,
-      rain_max: rs.max,
-      rain_sd: rs.sd,
-      n_temp: ts.n,
-      n_rain: rs.n
-    });
-  }
-
-  return out;
+.footer{
+  max-width:var(--max);
+  margin: 0 auto 28px;
+  padding: 0 var(--p);
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  color: var(--muted);
+  font-size:12px;
 }
+.muted{opacity:.9}
 
-function setPreviewTable(rows){
-  previewHead.innerHTML = "";
-  previewBody.innerHTML = "";
-  if (!rows.length) return;
-
-  const cols = Object.keys(rows[0]);
-
-  const trh = document.createElement("tr");
-  cols.forEach(c=>{
-    const th = document.createElement("th");
-    th.textContent = c;
-    trh.appendChild(th);
-  });
-  previewHead.appendChild(trh);
-
-  const preview = rows.slice(0, 25);
-  preview.forEach(r=>{
-    const tr = document.createElement("tr");
-    cols.forEach(c=>{
-      const td = document.createElement("td");
-      const v = r[c];
-      td.textContent = (typeof v === "number" && Number.isFinite(v)) ? (Math.round(v*100)/100).toString() : String(v);
-      tr.appendChild(td);
-    });
-    previewBody.appendChild(tr);
-  });
+@media (max-width: 1020px){
+  .layout{grid-template-columns:1fr}
+  #map{height:320px}
+  .chartWrap{height:380px}
 }
-
-function destroyChart(){
-  if (chart){
-    chart.destroy();
-    chart = null;
-  }
-}
-
-function renderChart(rows){
-  destroyChart();
-
-  const labels = rows.map(r => r.period);
-
-  const tempMean = rows.map(r => r.temp_mean);
-  const tempMin  = rows.map(r => r.temp_min);
-  const tempMax  = rows.map(r => r.temp_max);
-  const tempPlus = rows.map(r => (Number.isFinite(r.temp_mean) && Number.isFinite(r.temp_sd)) ? (r.temp_mean + r.temp_sd) : NaN);
-  const tempMinus= rows.map(r => (Number.isFinite(r.temp_mean) && Number.isFinite(r.temp_sd)) ? (r.temp_mean - r.temp_sd) : NaN);
-
-  const rainSum  = rows.map(r => r.rain_sum);
-
-  const ctx = el("climoChart").getContext("2d");
-
-  // datasets:
-  // - rain (bar) no eixo y2
-  // - temp mean (line) no eixo y
-  // - temp min/max (line) se marcado
-  // - temp sd band (fill between) se marcado (usando dois datasets com fill)
-  const datasets = [];
-
-  // precipitação (barras)
-  datasets.push({
-    type: "bar",
-    label: "Precipitação (mm) — soma",
-    data: rainSum,
-    yAxisID: "y2",
-    borderWidth: 0,
-    // sem cor fixa (Chart.js dá default), mas vamos manter legível:
-    // se você quiser cores, eu ajusto depois.
-  });
-
-  // sd band (primeiro: inferior, depois superior preenchendo)
-  if (showStd.checked){
-    datasets.push({
-      type: "line",
-      label: "Temp − 1σ",
-      data: tempMinus,
-      yAxisID: "y",
-      pointRadius: 0,
-      borderWidth: 0,
-      tension: 0.25
-    });
-    datasets.push({
-      type: "line",
-      label: "Faixa ±1σ",
-      data: tempPlus,
-      yAxisID: "y",
-      pointRadius: 0,
-      borderWidth: 0,
-      fill: "-1",
-      tension: 0.25
-    });
-  }
-
-  // min/max
-  if (showMinMax.checked){
-    datasets.push({
-      type: "line",
-      label: "Temperatura mín (°C)",
-      data: tempMin,
-      yAxisID: "y",
-      pointRadius: 2,
-      borderWidth: 2,
-      tension: 0.25
-    });
-    datasets.push({
-      type: "line",
-      label: "Temperatura máx (°C)",
-      data: tempMax,
-      yAxisID: "y",
-      pointRadius: 2,
-      borderWidth: 2,
-      tension: 0.25
-    });
-  }
-
-  // mean
-  datasets.push({
-    type: "line",
-    label: "Temperatura média (°C)",
-    data: tempMean,
-    yAxisID: "y",
-    pointRadius: 3,
-    borderWidth: 3,
-    tension: 0.25
-  });
-
-  chart = new Chart(ctx, {
-    data: { labels, datasets },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: { mode: "index", intersect: false },
-      plugins: {
-        legend: { position: "top" },
-        tooltip: {
-          callbacks: {
-            label: (ctx) => {
-              const v = ctx.parsed.y;
-              if (!Number.isFinite(v)) return `${ctx.dataset.label}: —`;
-              return `${ctx.dataset.label}: ${Math.round(v*100)/100}`;
-            }
-          }
-        }
-      },
-      scales: {
-        x: {
-          grid: { color: "rgba(255,255,255,.06)" },
-          ticks: { maxRotation: 0, autoSkip: true }
-        },
-        y: {
-          position: "left",
-          title: { display: true, text: "Temperatura (°C)" },
-          grid: { color: "rgba(255,255,255,.06)" }
-        },
-        y2: {
-          position: "right",
-          title: { display: true, text: "Precipitação (mm)" },
-          grid: { drawOnChartArea: false }
-        }
-      }
-    }
-  });
-}
-
-function downloadBlob(filename, blob){
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(()=>URL.revokeObjectURL(a.href), 1500);
-}
-
-function downloadAggregatedCSV(){
-  if (!aggregatedRows.length) return;
-  const cols = Object.keys(aggregatedRows[0]);
-  const lines = [];
-  lines.push(cols.join(","));
-  for (const r of aggregatedRows){
-    const line = cols.map(c=>{
-      const v = r[c];
-      if (typeof v === "number" && Number.isFinite(v)) return String(Math.round(v*10000)/10000);
-      // escape simples
-      const s = String(v ?? "");
-      return (s.includes(",") || s.includes('"') || s.includes("\n"))
-        ? `"${s.replace(/"/g,'""')}"`
-        : s;
-    }).join(",");
-    lines.push(line);
-  }
-  const blob = new Blob([lines.join("\n")], { type:"text/csv;charset=utf-8" });
-  downloadBlob(`climacac_agregado_${agg.value}.csv`, blob);
-}
-
-function downloadPNG(){
-  if (!chart) return;
-  const a = document.createElement("a");
-  a.href = chart.toBase64Image("image/png", 1);
-  a.download = `climacac_climograma_${agg.value}.png`;
-  a.click();
-}
-
-function setDateInputsFromRange(minD, maxD){
-  if (!minD || !maxD) return;
-  startDate.value = toISODate(minD);
-  endDate.value = toISODate(maxD);
-}
-
-function afterLoad(){
-  // preencher selects
-  fillSelect(dateCol, HEADERS, guessDateHeader(HEADERS));
-  fillSelect(tempCol, HEADERS, guessTempHeader(HEADERS));
-  fillSelect(rainCol, HEADERS, guessRainHeader(HEADERS));
-
-  // definir range
-  const r = dateRangeFromRows(RAW, dateCol.value);
-  if (r.min && r.max){
-    dataRangePill.textContent = `Período disponível: ${toISODate(r.min)} → ${toISODate(r.max)}`;
-    setDateInputsFromRange(r.min, r.max);
-  } else {
-    dataRangePill.textContent = `Período: não detectado (verifique a coluna de data)`;
-  }
-
-  setStatus(`CSV carregado: ${RAW.length} linhas. Agora clique em "Gerar climograma".`);
-  metaLine.textContent = `Linhas: ${RAW.length} • colunas: ${HEADERS.length}`;
-}
-
-function loadCSVFromText(text){
-  Papa.parse(text, {
-    header: true,
-    skipEmptyLines: true,
-    dynamicTyping: false,
-    complete: (res) => {
-      if (res.errors && res.errors.length){
-        console.warn(res.errors);
-        setStatus(`Falha ao ler CSV: ${res.errors[0].message}`, "bad");
-        return;
-      }
-      RAW = res.data || [];
-      // headers (Papa às vezes não dá fields)
-      HEADERS = res.meta && res.meta.fields
-        ? res.meta.fields.map(normalizeHeader).filter(Boolean)
-        : (RAW[0] ? Object.keys(RAW[0]).map(normalizeHeader) : []);
-
-      if (!RAW.length || !HEADERS.length){
-        setStatus("CSV vazio ou sem cabeçalho. Confirme se a 1ª linha tem nomes das colunas.", "bad");
-        return;
-      }
-      afterLoad();
-    }
-  });
-}
-
-async function loadFromURL(url){
-  try{
-    setStatus("Baixando CSV…", "warn");
-    const r = await fetch(url, { cache:"no-store" });
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    const text = await r.text();
-    loadCSVFromText(text);
-  }catch(err){
-    console.error(err);
-    setStatus(`Erro ao carregar URL: ${err.message}`, "bad");
-  }
-}
-
-function loadFromFile(file){
-  const fr = new FileReader();
-  fr.onload = () => loadCSVFromText(fr.result);
-  fr.onerror = () => setStatus("Erro lendo arquivo local.", "bad");
-  fr.readAsText(file, "utf-8");
-}
-
-/* Events */
-el("loadUrlBtn").addEventListener("click", ()=>{
-  const url = csvUrl.value.trim();
-  if (!url) return setStatus("Cole uma URL de CSV primeiro.", "warn");
-  loadFromURL(url);
-});
-
-el("loadFileBtn").addEventListener("click", ()=>{
-  const f = csvFile.files && csvFile.files[0];
-  if (!f) return setStatus("Selecione um arquivo CSV.", "warn");
-  loadFromFile(f);
-});
-
-el("loadLocalBtn").addEventListener("click", ()=>{
-  loadFromURL("assets/data/climacac-1.csv");
-});
-
-el("resetBtn").addEventListener("click", ()=>{
-  RAW = [];
-  HEADERS = [];
-  aggregatedRows = [];
-  destroyChart();
-  dateCol.innerHTML = "";
-  tempCol.innerHTML = "";
-  rainCol.innerHTML = "";
-  previewHead.innerHTML = "";
-  previewBody.innerHTML = "";
-  dataRangePill.textContent = "Carregue um CSV para ver o período disponível";
-  metaLine.textContent = "—";
-  downloadPngBtn.disabled = true;
-  downloadCsvBtn.disabled = true;
-  setStatus("Reset feito. Carregue um CSV novamente.");
-});
-
-renderBtn.addEventListener("click", ()=>{
-  if (!RAW.length) return setStatus("Carregue um CSV primeiro.", "warn");
-  if (!dateCol.value || !tempCol.value || !rainCol.value){
-    return setStatus("Selecione as colunas (data, temperatura, precipitação).", "warn");
-  }
-  aggregatedRows = buildAggregated();
-  if (!aggregatedRows.length){
-    destroyChart();
-    setPreviewTable([]);
-    metaLine.textContent = "Sem dados no período selecionado.";
-    downloadPngBtn.disabled = true;
-    downloadCsvBtn.disabled = true;
-    return setStatus("Sem dados para o período. Ajuste as datas.", "warn");
-  }
-
-  renderChart(aggregatedRows);
-  setPreviewTable(aggregatedRows);
-
-  const s = startDate.value || "—";
-  const e = endDate.value || "—";
-  metaLine.textContent = `Agregação: ${agg.options[agg.selectedIndex].text} • Período: ${s} → ${e}`;
-
-  downloadPngBtn.disabled = false;
-  downloadCsvBtn.disabled = false;
-
-  setStatus("Climograma gerado.");
-});
-
-downloadPngBtn.addEventListener("click", downloadPNG);
-downloadCsvBtn.addEventListener("click", downloadAggregatedCSV);
-
-// Re-render rápido quando trocar toggles (se já existir chart)
-showStd.addEventListener("change", ()=>{ if (aggregatedRows.length) renderChart(aggregatedRows); });
-showMinMax.addEventListener("change", ()=>{ if (aggregatedRows.length) renderChart(aggregatedRows); });
-
-/* Auto-load opcional: se você quiser já abrir com o CSV local, descomente:
-loadFromURL("assets/data/climacac-1.csv");
-*/
