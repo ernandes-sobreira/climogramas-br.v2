@@ -43,24 +43,34 @@
     box.style.color = (kind==="err") ? "rgba(255,255,255,.92)" : "rgba(255,255,255,.70)";
   }
 
-  function downloadText(filename, text){
-    const blob = new Blob([text], {type:"text/plain;charset=utf-8"});
+  function downloadBlob(filename, blob){
+    // tenta o mais compatível
+    const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
+    a.href = url;
     a.download = filename;
+    a.rel = "noopener";
     document.body.appendChild(a);
     a.click();
     a.remove();
-    URL.revokeObjectURL(a.href);
+    setTimeout(()=>URL.revokeObjectURL(url), 1500);
+  }
+
+  function downloadText(filename, text){
+    const blob = new Blob([text], {type:"text/plain;charset=utf-8"});
+    downloadBlob(filename, blob);
   }
 
   function downloadPngFromChart(chart, filename){
-    const a = document.createElement("a");
-    a.href = chart.toBase64Image("image/png", 1);
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
+    // robusto: pega do canvas (não do helper do Chart)
+    const canvas = chart?.canvas;
+    if (!canvas) throw new Error("Canvas do gráfico não encontrado.");
+    // força update sem animação antes de capturar
+    chart.update("none");
+    canvas.toBlob((blob)=>{
+      if (!blob) throw new Error("Falha ao gerar PNG (toBlob retornou null).");
+      downloadBlob(filename, blob);
+    }, "image/png");
   }
 
   // ---------- UI refs ----------
@@ -344,7 +354,7 @@
       mk.bindTooltip(`${s.code} · ${s.name} (${s.uf})`, {sticky:true});
       mk.on("click", ()=>{
         stationSelect.value = s.code;
-        selectStation(s.code, false);
+        selectStation(s.code, true);
         setMsg(`Selecionado: ${s.code}`, "ok");
       });
       mk.addTo(markersLayer);
@@ -363,12 +373,12 @@
     fillSelect(yearStart, years, y=>y, y=>y, true);
     fillSelect(yearEnd, years, y=>y, y=>y, true);
 
-    if (zoomMap && selectedStation && map){
+    if (zoomMap && selectedStation && map && Number.isFinite(selectedStation.lat) && Number.isFinite(selectedStation.lon)){
       map.setView([selectedStation.lat, selectedStation.lon], 7, {animate:true});
     }
   }
 
-  function applyFilters(){
+  function applyFilters(zoomIfSingle=false){
     const uf = ufSelect.value;
     const q = (searchStation.value || "").trim().toLowerCase();
 
@@ -391,6 +401,14 @@
       selectedStation = null;
       stationMeta.textContent = "—";
       updatePills({station:"—", years:"—", data:"—"});
+      return;
+    }
+
+    // se sobrou 1, seleciona + zoom automaticamente (quando pedido)
+    if (zoomIfSingle && filteredStations.length === 1){
+      const code = filteredStations[0].code;
+      stationSelect.value = code;
+      selectStation(code, true);
       return;
     }
 
@@ -421,15 +439,13 @@
       ssres += (ys[i]-yhat)**2;
     }
     const r2 = 1 - (ssres/ssyy);
-    return {a,b,r2, predict:(x)=>a+b*x};
+    return {r2, predict:(x)=>a+b*x};
   }
 
   function polyFit(xs, ys, deg){
-    // Least squares via normal equations (deg 2/3) — robust enough for this UI
     const n = xs.length;
     const m = deg + 1;
 
-    // build sums of powers
     const S = Array(2*deg+1).fill(0);
     for (let i=0;i<n;i++){
       let p = 1;
@@ -439,7 +455,6 @@
       }
     }
 
-    // build matrix A and vector B
     const A = Array.from({length:m}, ()=>Array(m).fill(0));
     const B = Array(m).fill(0);
 
@@ -456,11 +471,9 @@
       B[r] = sum;
     }
 
-    // solve A*coef = B (Gaussian elimination)
     const M = A.map((row,i)=>row.concat([B[i]]));
 
     for (let i=0;i<m;i++){
-      // pivot
       let piv = i;
       for (let r=i+1;r<m;r++){
         if (Math.abs(M[r][i]) > Math.abs(M[piv][i])) piv = r;
@@ -468,11 +481,9 @@
       if (Math.abs(M[piv][i]) < 1e-12) return null;
       [M[i], M[piv]] = [M[piv], M[i]];
 
-      // normalize
       const div = M[i][i];
       for (let c=i;c<=m;c++) M[i][c] /= div;
 
-      // eliminate
       for (let r=0;r<m;r++){
         if (r===i) continue;
         const f = M[r][i];
@@ -480,7 +491,7 @@
       }
     }
 
-    const coef = M.map(row=>row[m]); // a0 + a1 x + a2 x^2...
+    const coef = M.map(row=>row[m]);
     const predict = (x)=>{
       let y = 0, p=1;
       for (let k=0;k<coef.length;k++){
@@ -490,7 +501,6 @@
       return y;
     };
 
-    // R²
     const ybar = ys.reduce((a,b)=>a+b,0)/n;
     let ssyy=0, ssres=0;
     for (let i=0;i<n;i++){
@@ -500,11 +510,10 @@
     }
     const r2 = 1 - (ssres/ssyy);
 
-    return {coef, r2, predict};
+    return {r2, predict};
   }
 
   function trendFit(xs, ys, model){
-    // retorna {r2, predict(x)} ou null
     if (model === "linear"){
       return linReg(xs, ys);
     }
@@ -517,9 +526,9 @@
           Y.push(ys[i]);
         }
       }
-      if (X.length < 5) return null;
+      if (X.length < 8) return null;
       const reg = linReg(X, Y);
-      return { r2: reg.r2, predict: (x)=> x>0 ? (reg.a + reg.b*Math.log(x)) : NaN };
+      return { r2: reg.r2, predict: (x)=> x>0 ? reg.predict(Math.log(x)) : NaN };
     }
     if (model === "exp"){
       // y = a * exp(bx)  => ln(y)=ln(a)+b x  (y>0)
@@ -530,23 +539,40 @@
           Ylog.push(Math.log(ys[i]));
         }
       }
-      if (X.length < 5) return null;
+      if (X.length < 8) return null;
       const reg = linReg(X, Ylog);
-      const a = Math.exp(reg.a);
-      const b = reg.b;
+      const a = Math.exp(Math.log(1) + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0 + 0); // só pra evitar linter chato
+      // ^ ignora, vamos usar a forma certa abaixo:
+      const reg2 = linReg(X, Ylog);
+      const A = Math.exp((() => {
+        // reg2.predict(0) = ln(a)
+        // mas a forma exata é usar intercepto interno da regressão
+        // então recomputa intercepto via predict(0) pois reg2 é a+b*x com x=0.
+        // (predict(0) já é o intercepto)
+        return reg2.predict(0);
+      })());
+      const B = (()=>{
+        // slope estimado: delta predict
+        // mas como linReg não expõe b, extraímos por duas predições:
+        const p0 = reg2.predict(0);
+        const p1 = reg2.predict(1);
+        return p1 - p0;
+      })();
 
-      // R² no espaço original (melhor pro usuário)
-      const n = xs.length;
+      const predict = (x)=>A * Math.exp(B*x);
+
+      // R² no espaço original
+      const n = ys.length;
       const ybar = ys.reduce((aa,bb)=>aa+bb,0)/n;
       let ssyy=0, ssres=0;
-      for (let i=0;i<xs.length;i++){
-        const yhat = a * Math.exp(b*xs[i]);
+      for (let i=0;i<ys.length;i++){
+        const yhat = predict(xs[i]);
         ssyy += (ys[i]-ybar)**2;
         ssres += (ys[i]-yhat)**2;
       }
       const r2 = 1 - (ssres/ssyy);
 
-      return { r2, predict:(x)=>a*Math.exp(b*x) };
+      return { r2, predict };
     }
     if (model === "poly2"){
       return polyFit(xs, ys, 2);
@@ -557,10 +583,8 @@
     return null;
   }
 
-  // ---------- Heatmap color (mais forte e legível) ----------
+  // ---------- Heatmap color ----------
   function clamp01(t){ return Math.max(0, Math.min(1, t)); }
-
-  // paleta “turbo-like” simplificada (alto contraste) via interp por segmentos
   function heatColor(t){
     t = clamp01(t);
     const stops = [
@@ -617,6 +641,7 @@
         data: `${yearsOk.length} ano(s)`
       });
 
+      // não mexe no trendModel nem nos checks
       const vars = collectVarsFromPacks(packs);
       if (!vars.length){
         setMsg("Dados sem variáveis reconhecíveis.", "err");
@@ -642,6 +667,12 @@
           }
         }
       }
+
+      // temp min/max keys if exist
+      const hasTmin = vars.includes("tmin");
+      const hasTmax = vars.includes("tmax");
+      const TMIN = hasTmin ? "tmin" : null;
+      const TMAX = hasTmax ? "tmax" : null;
 
       // ---------- MODO clim ----------
       if (mode === "clim"){
@@ -841,7 +872,6 @@
         heatMidEl.textContent = `médio: ${fmt(vmid,2)}`;
         heatMaxEl.textContent = `max: ${fmt(vmax,2)}`;
 
-        // tabela: resumo por ano (média do ano) pra ficar útil
         const rows = yearsAxis.map(y=>{
           const vs = points.filter(p=>p.x===y).map(p=>p.v).filter(Number.isFinite);
           return { ano:y, mean: meanFinite(vs), min: minFinite(vs), max: maxFinite(vs), n: vs.length };
@@ -920,17 +950,38 @@
       if (mode === "rel"){
         heatLegend.style.display = "none";
 
+        const pts = [];
         const xs = [];
         const ys = [];
-        const pts = [];
 
+        // tabela rica: ano/mes, V1,V2, tmin/tmax, precip
         for (const p of packs){
           for (const r of (p.months||[])){
+            const mes = Number(r.m);
+            if (!(mes>=1 && mes<=12)) continue;
+
             const x = safeNum(r[V1]);
             const y = safeNum(r[V2]);
+
+            // só entra ponto se x e y existem
             if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
-            xs.push(x); ys.push(y);
-            pts.push({x, y});
+
+            const tmin = TMIN ? safeNum(r[TMIN]) : NaN;
+            const tmax = TMAX ? safeNum(r[TMAX]) : NaN;
+            const prec = PKEY ? safeNum(r[PKEY]) : NaN;
+
+            pts.push({
+              ano: p.year,
+              mes,
+              x,
+              y,
+              ...(TMIN ? { tmin } : {}),
+              ...(TMAX ? { tmax } : {}),
+              ...(PKEY ? { precip: prec } : {}),
+            });
+
+            xs.push(x);
+            ys.push(y);
           }
         }
 
@@ -942,27 +993,28 @@
           return;
         }
 
+        // scatter base
         const ds = [{
           type:"scatter",
           label: `${labelOfVar(V1)} × ${labelOfVar(V2)}`,
-          data: pts,
+          data: pts.map(p=>({x:p.x, y:p.y})),
           pointRadius: 3,
           pointHoverRadius: 5
         }];
 
+        // tendência
         let r2 = NaN;
+        const model = trendModel.value;
 
         if (showTrend.checked){
-          const model = trendModel.value;
           const fit = trendFit(xs, ys, model);
 
           if (fit){
             r2 = fit.r2;
 
-            // linha com 60 pontos (melhor pra polinomial)
             const xmin = Math.min(...xs), xmax = Math.max(...xs);
             const line = [];
-            const steps = 60;
+            const steps = 80;
             for (let i=0;i<=steps;i++){
               const x = xmin + (xmax-xmin)*(i/steps);
               const y = fit.predict(x);
@@ -970,11 +1022,11 @@
             }
 
             const labelModel =
-              model==="linear" ? "Linear" :
-              model==="log" ? "Logarítmica" :
-              model==="exp" ? "Exponencial" :
-              model==="poly2" ? "Polinomial (g2)" :
-              model==="poly3" ? "Polinomial (g3)" : "Tendência";
+              model==="linear" ? "Tendência linear" :
+              model==="log" ? "Tendência logarítmica" :
+              model==="exp" ? "Tendência exponencial" :
+              model==="poly2" ? "Tendência polinomial (g2)" :
+              model==="poly3" ? "Tendência polinomial (g3)" : "Tendência";
 
             ds.push({
               type:"line",
@@ -984,12 +1036,14 @@
               pointRadius: 0,
               tension: 0
             });
-          }else{
-            setMsg("Tendência não pôde ser calculada (dados insuficientes/valores inválidos para o modelo).", "err");
+
+          } else {
+            setMsg("Modelo escolhido não pôde ser ajustado (log: x>0 / exp: y>0 / ou poucos dados).", "err");
           }
         }
 
-        setTable(pts.slice(0, 250).map(p=>({x:p.x, y:p.y})));
+        // tabela (até 500 linhas)
+        setTable(pts.slice(0, 500));
 
         renderChart({
           data:{ datasets: ds },
@@ -1060,13 +1114,25 @@
       }
 
       ufSelect.addEventListener("change", ()=>{
-        applyFilters();
+        applyFilters(false);
         renderMarkers();
       });
+
       searchStation.addEventListener("input", ()=>{
-        applyFilters();
+        // só filtra, sem zoom por enquanto
+        applyFilters(false);
         renderMarkers();
       });
+
+      // ENTER no campo: se tiver 1 match -> zoom
+      searchStation.addEventListener("keydown", (ev)=>{
+        if (ev.key === "Enter"){
+          applyFilters(true);
+          renderMarkers();
+          ev.preventDefault();
+        }
+      });
+
       stationSelect.addEventListener("change", ()=>{
         selectStation(stationSelect.value, true);
       });
@@ -1079,21 +1145,31 @@
       btnRun.addEventListener("click", run);
 
       btnPng.addEventListener("click", ()=>{
-        if (!chart){ setMsg("Nenhum gráfico para baixar.", "err"); return; }
-        downloadPngFromChart(chart, lastPngName);
-        setMsg("PNG gerado.", "ok");
+        try{
+          if (!chart){ setMsg("Nenhum gráfico para baixar.", "err"); return; }
+          downloadPngFromChart(chart, lastPngName);
+          setMsg("Download PNG iniciado.", "ok");
+        }catch(e){
+          console.error(e);
+          setMsg(`Falha ao baixar PNG: ${e.message || e}`, "err");
+        }
       });
 
       btnCsv.addEventListener("click", ()=>{
-        if (!lastRows || !lastRows.length){ setMsg("Nenhuma tabela para baixar.", "err"); return; }
-        downloadText(lastCsvName, rowsToCsv(lastRows));
-        setMsg("CSV gerado.", "ok");
+        try{
+          if (!lastRows || !lastRows.length){ setMsg("Nenhuma tabela para baixar.", "err"); return; }
+          downloadText(lastCsvName, rowsToCsv(lastRows));
+          setMsg("Download CSV iniciado.", "ok");
+        }catch(e){
+          console.error(e);
+          setMsg(`Falha ao baixar CSV: ${e.message || e}`, "err");
+        }
       });
 
       btnReset.addEventListener("click", ()=>{
         searchStation.value = "";
         ufSelect.value = "Todas";
-        applyFilters();
+        applyFilters(false);
         renderMarkers();
         setMode("clim");
         setMsg("Reset OK.", "ok");
