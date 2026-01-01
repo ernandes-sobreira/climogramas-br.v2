@@ -23,7 +23,7 @@
       <div class="brandTitle">climogramas-br <span class="badge">v2</span></div>
       <div class="brandSubtitle">
         Plataforma para explorar séries climáticas (INMET) a partir de JSON mensal/anual por estação/ano.
-        Temp e Prec em destaque, com outras variáveis quando existirem.
+        Idealizado por <b>Ernandes Sobreira</b>. Dados INMET coletados em <b>dez/2025</b>.
       </div>
     </div>
 
@@ -46,7 +46,7 @@
         </div>
         <div class="field">
           <label>Buscar estação</label>
-          <input id="searchStation" type="text" placeholder="Digite nome/código (ex: A001)" />
+          <input id="searchStation" type="text" placeholder="Digite nome/código (ex: A001) e ENTER" />
         </div>
       </div>
 
@@ -70,12 +70,12 @@
       <div class="field">
         <label>Nível de análise</label>
         <div class="modeRow">
-          <button class="modeBtn active" data-mode="clim" id="btnClim">Climograma (média mensal)</button>
-          <button class="modeBtn" data-mode="annual" id="btnAnnual">Série anual</button>
+          <button class="modeBtn active" data-mode="clim" id="btnClim" type="button">Climograma (média mensal)</button>
+          <button class="modeBtn" data-mode="annual" id="btnAnnual" type="button">Série anual</button>
         </div>
         <div class="modeRow">
-          <button class="modeBtn" data-mode="heatmap" id="btnHeatmap">Mensal por ano (heatmap)</button>
-          <button class="modeBtn" data-mode="rel" id="btnRel">Relação entre variáveis</button>
+          <button class="modeBtn" data-mode="heatmap" id="btnHeatmap" type="button">Mensal por ano (heatmap)</button>
+          <button class="modeBtn" data-mode="rel" id="btnRel" type="button">Relação entre variáveis</button>
         </div>
       </div>
 
@@ -116,15 +116,15 @@
       </div>
 
       <div class="actions">
-        <button id="btnRun" class="primary">Gerar</button>
-        <button id="btnPng">Baixar PNG</button>
-        <button id="btnCsv">Baixar CSV</button>
-        <button id="btnReset" class="ghost">Reset</button>
+        <button id="btnRun" class="primary" type="button">Gerar</button>
+        <button id="btnPng" type="button">Baixar PNG</button>
+        <button id="btnCsv" type="button">Baixar CSV</button>
+        <button id="btnReset" class="ghost" type="button">Reset</button>
       </div>
 
       <div class="msg" id="msgBox">Pronto.</div>
 
-      <!-- MAPA NO CANTINHO (painel esquerdo) -->
+      <!-- MAPA -->
       <div class="miniCard">
         <div class="miniHeader">
           <div class="miniTitle">Mapa de estações</div>
@@ -149,7 +149,7 @@
         <div class="chartWrap">
           <canvas id="mainChart"></canvas>
 
-          <!-- Legenda do heatmap (aparece só no modo heatmap) -->
+          <!-- Legenda do heatmap -->
           <div class="heatLegend" id="heatLegend" style="display:none;">
             <div class="heatLegendRow">
               <span class="heatLegendLabel">Baixo</span>
@@ -180,8 +180,7 @@
         </div>
 
         <div class="footerNote">
-          climogramas-br.v2 · GitHub Pages · dados INMET transformados para JSON.
-          Se uma estação não tiver ano/variável, a plataforma ignora e segue.
+          Idealizado por Ernandes Sobreira · Dados INMET coletados em dez/2025.
         </div>
       </div>
     </section>
