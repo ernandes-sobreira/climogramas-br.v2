@@ -1,35 +1,23 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Climogramas BR • INMET (JSON)</title>
+  <title>climogramas-br.v2</title>
 
-  <!-- Cache-bust (obrigatório no GH Pages quando você tá alterando muito) -->
-  <link rel="stylesheet" href="./style.css?v=20260101" />
-
-  <!-- Fallback mínimo: se o CSS falhar, o mapa e o gráfico não colapsam -->
-  <style>
-    #map{height:340px; width:100%; background:#0b1020;}
-    .chartWrap{height:440px}
-    .chartWrap canvas{width:100% !important; height:100% !important}
-  </style>
+  <link rel="stylesheet" href="style.css?v=20260101">
 
   <!-- Leaflet -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
-
-  <!-- Chart.js -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
 
 <body>
   <header class="topbar">
     <div class="brand">
-      <div class="logo">climogramas<span>.br</span><small>v2</small></div>
+      <div class="logo">climogramas-<span>br</span><small>v2</small></div>
       <div class="subtitle">
-        Plataforma para explorar séries climáticas (INMET) a partir de JSON por estação/ano.
-        Temp e Prec em destaque, com opções extras quando disponíveis (pressão, radiação, vento, umidade...).
+        Plataforma para explorar séries climáticas (INMET) a partir de <b>JSON mensal/anual</b> por estação/ano.
+        Temp e Prec em destaque, com outras variáveis quando existirem.
       </div>
     </div>
 
@@ -41,7 +29,7 @@
   </header>
 
   <main class="layout">
-    <section class="panel left">
+    <section class="panel">
       <div class="card">
         <h2>Selecionar</h2>
 
@@ -53,13 +41,13 @@
 
           <div class="field">
             <label>Buscar estação</label>
-            <input id="searchStation" type="text" placeholder="Digite nome/código (ex: A001, BRASILIA...)" />
+            <input id="searchStation" placeholder="Digite nome/código (ex: A001, CUIABÁ)" />
           </div>
 
           <div class="field span2">
             <label>Estação</label>
             <select id="stationSelect"></select>
-            <div class="hint" id="stationHint">Clique no mapa ou escolha na lista.</div>
+            <div class="hint" id="stationHint">—</div>
           </div>
 
           <div class="field">
@@ -71,61 +59,95 @@
             <label>Ano final</label>
             <select id="yearEnd"></select>
           </div>
+        </div>
 
-          <div class="field span2">
-            <label>Nível de análise</label>
-            <div class="segmented">
-              <button class="seg on" id="tabMonthly">Climograma (média mensal)</button>
-              <button class="seg" id="tabAnnual">Série anual</button>
-              <button class="seg" id="tabMonthSeries">Mensal por ano</button>
-              <button class="seg" id="tabRelations">Relação entre variáveis</button>
-            </div>
+        <div style="height:10px"></div>
+
+        <div class="field">
+          <label>Nível de análise</label>
+          <div class="segmented">
+            <button class="seg on" id="tabMonthly">Climograma (média mensal)</button>
+            <button class="seg" id="tabAnnual">Série anual</button>
+            <button class="seg" id="tabMonthSeries">Mensal por ano (heatmap)</button>
+            <button class="seg" id="tabRelations">Relação entre variáveis</button>
           </div>
+        </div>
 
+        <div style="height:10px"></div>
+
+        <div class="grid2">
           <div class="field">
-            <label>Variável 1</label>
+            <label>Variável 1 (principal)</label>
             <select id="var1"></select>
-            <div class="hint">Usada no gráfico principal (e no scatter, se for o caso).</div>
+            <div class="miniHint">Usada no gráfico principal (e no scatter, se for o caso).</div>
           </div>
 
           <div class="field">
             <label>Variável 2 (relações)</label>
             <select id="var2"></select>
-            <div class="hint">Só aparece no modo “Relação”.</div>
+            <div class="miniHint">Só aparece no modo “Relação”.</div>
           </div>
 
-          <div class="field span2">
-            <label>Opções</label>
-            <div class="checks">
-              <label class="check"><input type="checkbox" id="optMinMax" checked /> <span>Mostrar Mín/Máx (quando fizer sentido)</span></label>
-              <label class="check"><input type="checkbox" id="optMean" checked /> <span>Mostrar Média</span></label>
-              <label class="check"><input type="checkbox" id="optPrecBars" checked /> <span>Precipitação em barras (quando disponível)</span></label>
-            </div>
-          </div>
+          <div class="field span2" id="trendBox">
+            <label>Tendência (no scatter)</label>
+            <div class="grid2">
+              <div class="field">
+                <label>Modelo</label>
+                <select id="trendModel">
+                  <option value="linear">Linear</option>
+                  <option value="exp">Exponencial</option>
+                  <option value="log">Logarítmica</option>
+                  <option value="poly">Polinomial</option>
+                </select>
+              </div>
 
-          <div class="field span2">
-            <label>Ações</label>
-            <div class="actions">
-              <button class="btn primary" id="btnRender">Gerar</button>
-              <button class="btn" id="btnPNG" disabled>Baixar PNG</button>
-              <button class="btn" id="btnCSV" disabled>Baixar CSV</button>
-              <button class="btn ghost" id="btnReset">Reset</button>
+              <div class="field" id="polyDegreeBox">
+                <label>Grau (polinomial)</label>
+                <select id="polyDegree">
+                  <option value="2">2</option>
+                  <option value="3">3</option>
+                  <option value="4">4</option>
+                  <option value="5">5</option>
+                </select>
+              </div>
             </div>
-            <div class="hint" id="msg">Carregando base…</div>
+
+            <div class="checks" style="margin-top:8px;">
+              <label class="check"><input type="checkbox" id="showTrend" checked> Mostrar linha de tendência</label>
+              <label class="check"><input type="checkbox" id="showR2" checked> Mostrar R²</label>
+            </div>
           </div>
         </div>
+
+        <div style="height:10px"></div>
+
+        <div class="checks">
+          <label class="check"><input type="checkbox" id="optMinMax" checked> Mostrar Min/Máx (quando fizer sentido)</label>
+          <label class="check"><input type="checkbox" id="optMean" checked> Mostrar Média</label>
+          <label class="check"><input type="checkbox" id="optPrecBars" checked> Precipitação em barras (quando disponível)</label>
+        </div>
+
+        <div style="height:10px"></div>
+
+        <div class="actions">
+          <button class="btn primary" id="btnRender">Gerar</button>
+          <button class="btn" id="btnPNG" disabled>Baixar PNG</button>
+          <button class="btn" id="btnCSV" disabled>Baixar CSV</button>
+          <button class="btn ghost" id="btnReset">Reset</button>
+        </div>
+
+        <div class="hint" id="msg" style="margin-top:10px;">—</div>
       </div>
 
-      <div class="card mapCard">
-        <div class="mapHead">
-          <h2>Mapa de estações</h2>
-          <div class="miniHint">Clique em um marcador para selecionar.</div>
-        </div>
+      <div class="card">
+        <h2>Mapa de estações</h2>
+        <div class="miniHint">Clique em um marcador para selecionar.</div>
+        <div style="height:10px"></div>
         <div id="map"></div>
       </div>
     </section>
 
-    <section class="panel right">
+    <section class="panel">
       <div class="card">
         <div class="chartHead">
           <div>
@@ -139,7 +161,19 @@
           <canvas id="chart"></canvas>
         </div>
 
-        <div class="subCard" id="subPanel"></div>
+        <div class="subCard" id="subPanel">
+          Dica: o sistema ignora meses/anos nulos e usa só o que existe no JSON.
+        </div>
+
+        <div class="heatLegend" id="heatLegend" style="display:none;">
+          <div class="heatLegendRow">
+            <div class="heatLegendTitle">Legenda (heatmap)</div>
+            <div class="heatLegendMinMax">
+              <span id="heatMin">—</span> <span class="muted">→</span> <span id="heatMax">—</span>
+            </div>
+          </div>
+          <div class="heatLegendBar" id="heatBar"></div>
+        </div>
 
         <div class="tableBlock">
           <div class="tableHead">
@@ -153,17 +187,19 @@
             </table>
           </div>
         </div>
-
       </div>
     </section>
   </main>
 
   <footer class="footer">
-    <div><b>climogramas-br.v2</b> • GitHub Pages • dados INMET transformados para JSON.</div>
-    <div class="muted">Se um município/estação não tiver ano/variável, a plataforma simplesmente ignora e segue.</div>
+    <div>climogramas-br.v2 • GitHub Pages • dados INMET transformados para JSON</div>
+    <div class="muted">Se uma estação não tiver ano/variável, a plataforma ignora e segue.</div>
   </footer>
 
-  <!-- Cache-bust no JS também -->
-  <script src="./app.js?v=20260101"></script>
+  <!-- libs -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <script src="app.js?v=20260101"></script>
 </body>
 </html>
