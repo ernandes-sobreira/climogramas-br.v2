@@ -715,54 +715,159 @@ async function render(){
     return;
   }
 
-  // ====== MODO 2: Série anual ======
-  if (mode==="annual"){
-    const rows = [];
-    for (const y of years){
-      const pack = packs.find(p=>p.year===y);
-      if (!pack) continue;
-      const vals = pack.months.map(r=>r[V1]).filter(Number.isFinite);
+// ====== MODO 2: Série anual ======
+if (mode === "annual") {
+  const rows = [];
 
-      rows.push({
-        ano: y,
-        mean: meanFinite(vals),
-        min: minFinite(vals),
-        max: maxFinite(vals),
-        sum: sumFinite(vals),
-        n: vals.length
-      });
-    }
+  // 1) Calcula estatísticas anuais da variável V1 a partir dos meses
+  for (const y of years) {
+    const pack = packs.find(p => p.year === y);
+    if (!pack) continue;
 
-    setTable(rows);
+    const vals = pack.months.map(r => r[V1]).filter(Number.isFinite);
 
-    const labels = rows.map(r=>r.ano);
-    const datasets = [];
-
-    if (optMinMax.checked){
-      datasets.push({ type:"line", label:`${labelOfVar(V1)} • mín (ano)`, data: rows.map(r=>r.min), yAxisID:"y", borderWidth:2, pointRadius:2, tension:0.25 });
-      datasets.push({ type:"line", label:`${labelOfVar(V1)} • máx (ano)`, data: rows.map(r=>r.max), yAxisID:"y", borderWidth:2, pointRadius:2, tension:0.25 });
-    }
-    if (optMean.checked){
-      datasets.push({ type:"line", label:`${labelOfVar(V1)} • média (ano)`, data: rows.map(r=>r.mean), yAxisID:"y", borderWidth:3, pointRadius:3, tension:0.25 });
-    }
-
-    renderChart(labels, datasets, labelOfVar(V1), "");
-
-    chartTitle.textContent = `Série anual — ${stationLabel}`;
-    chartMeta.textContent = `Anos usados: ${yearsOk[0]}–${yearsOk[yearsOk.length-1]} (por months).`;
-    lastChartTitle = `serie_anual_${selectedStation.code}_${V1}_${yearsOk[0]}_${yearsOk[yearsOk.length-1]}`;
-
-    setKpis([
-      { k:"Anos úteis", v: String(rows.filter(r=>r.n>0).length) },
-      { k:"Média (anos)", v: fmt(meanFinite(rows.map(r=>r.mean)),2) },
-      { k:"Min (ano)", v: fmt(minFinite(rows.map(r=>r.min)),2) },
-      { k:"Max (ano)", v: fmt(maxFinite(rows.map(r=>r.max)),2) },
-    ]);
-
-    enableDownloads(true);
-    setMsg("Pronto.", "ok");
-    return;
+    rows.push({
+      ano: y,
+      mean: meanFinite(vals),
+      min: minFinite(vals),
+      max: maxFinite(vals),
+      sum: sumFinite(vals),
+      n: vals.length
+    });
   }
+
+  setTable(rows);
+
+  // 2) Precipitação anual (se existir) — soma dos 12 meses do ano
+  let annualPrec = null;
+  let PKEY = null;
+
+  if (hasVar("p") || hasVar("prec") || hasVar("prcp") || hasVar("ppt")) {
+    PKEY = pickFirst(["p", "prec", "prcp", "ppt"]);
+    annualPrec = rows.map(r => {
+      const pack = packs.find(p => p.year === r.ano);
+      if (!pack) return null;
+      const pv = pack.months.map(m => m[PKEY]).filter(Number.isFinite);
+      // precip anual = soma dos meses válidos
+      return sumFinite(pv);
+    });
+  }
+
+  const labels = rows.map(r => r.ano);
+  const datasets = [];
+
+  // 3) Linhas de Min/Max anual (da V1)
+  if (optMinMax.checked) {
+    datasets.push({
+      type: "line",
+      label: `${labelOfVar(V1)} • mín (ano)`,
+      data: rows.map(r => r.min),
+      yAxisID: "y",
+      borderWidth: 2,
+      pointRadius: 2,
+      tension: 0.25
+    });
+
+    datasets.push({
+      type: "line",
+      label: `${labelOfVar(V1)} • máx (ano)`,
+      data: rows.map(r => r.max),
+      yAxisID: "y",
+      borderWidth: 2,
+      pointRadius: 2,
+      tension: 0.25
+    });
+  }
+
+  // 4) Linha de média anual (da V1)
+  if (optMean.checked) {
+    datasets.push({
+      type: "line",
+      label: `${labelOfVar(V1)} • média (ano)`,
+      data: rows.map(r => r.mean),
+      yAxisID: "y",
+      borderWidth: 3,
+      pointRadius: 3,
+      tension: 0.25
+    });
+  }
+
+  // 5) Barras de precipitação anual no eixo direito (se solicitado e se existir)
+  if (optBars.checked && annualPrec && annualPrec.some(Number.isFinite)) {
+    datasets.push({
+      type: "bar",
+      label: "Precipitação anual (mm)",
+      data: annualPrec,
+      yAxisID: "yP",
+      borderWidth: 1,
+      order: 3
+    });
+  }
+
+  // 6) Render do gráfico ANUAL (com eixo direito yP garantido)
+  if (chart) {
+    chart.destroy();
+    chart = null;
+  }
+
+  chart = new Chart(ctx, {
+    data: {
+      labels,
+      datasets
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: { position: "top" },
+        tooltip: {
+          callbacks: {
+            label: (c) => {
+              const lab = c.dataset.label || "";
+              const v = c.parsed?.y;
+              return `${lab}: ${Number.isFinite(v) ? fmt(v, 2) : "sem dado"}`;
+            }
+          }
+        }
+      },
+      scales: {
+        y: {
+          position: "left",
+          title: { display: true, text: labelOfVar(V1) },
+          grid: { color: "rgba(255,255,255,.06)" }
+        },
+        yP: {
+          position: "right",
+          display: (optBars.checked && annualPrec && annualPrec.some(Number.isFinite)),
+          title: { display: true, text: "Precipitação (mm)" },
+          grid: { drawOnChartArea: false }
+        },
+        x: {
+          title: { display: true, text: "Ano" },
+          ticks: { autoSkip: true, maxRotation: 0 },
+          grid: { color: "rgba(255,255,255,.06)" }
+        }
+      }
+    }
+  });
+
+  chartTitle.textContent = `Série anual — ${stationLabel}`;
+  chartMeta.textContent = `Anos usados: ${yearsOk[0]}–${yearsOk[yearsOk.length - 1]} (por months).`;
+  lastChartTitle = `serie_anual_${selectedStation.code}_${V1}_${yearsOk[0]}_${yearsOk[yearsOk.length - 1]}`;
+
+  setKpis([
+    { k: "Anos úteis", v: String(rows.filter(r => r.n > 0).length) },
+    { k: "Média (anos)", v: fmt(meanFinite(rows.map(r => r.mean)), 2) },
+    { k: "Min (ano)", v: fmt(minFinite(rows.map(r => r.min)), 2) },
+    { k: "Max (ano)", v: fmt(maxFinite(rows.map(r => r.max)), 2) },
+  ]);
+
+  enableDownloads(true);
+  setMsg("Pronto.", "ok");
+  return;
+}
+
 
   // ====== MODO 3: Mensal por ano (HEATMAP) ======
   if (mode==="monthSeries"){
