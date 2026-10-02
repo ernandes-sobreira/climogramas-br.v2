@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Climogramas BR · HidroWeb ANA (beta)</title>
+  <link rel="stylesheet" href="../style.css">
+  <link rel="stylesheet" href="ana.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script defer src="ana-stats.js"></script>
+  <script defer src="ana-api.js"></script>
+  <script defer src="ana.js"></script>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <div class="brandTitle">climogramas-br <span class="badge">ANA beta</span></div>
+    <div class="brandSubtitle">Clima + hidrologia · dados oficiais ANA/HidroWeb · módulo isolado do sistema INMET atual.</div>
+  </div>
+  <div class="topActions">
+    <a class="backLink" href="../">← Voltar ao Climogramas BR</a>
+  </div>
+</header>
+
+<main class="anaLayout">
+  <aside class="panel anaPanel">
+    <h2>HidroWeb ANA</h2>
+
+    <div class="field">
+      <label>Endpoint seguro do proxy</label>
+      <input id="proxyUrl" type="url" placeholder="https://seu-proxy.exemplo.workers.dev">
+      <div class="small">As credenciais ANA nunca ficam no GitHub Pages.</div>
+    </div>
+
+    <div class="grid2">
+      <div class="field">
+        <label>UF</label>
+        <select id="ufSelect">
+          <option value="">Selecione</option>
+          <option>AC</option><option>AL</option><option>AP</option><option>AM</option>
+          <option>BA</option><option>CE</option><option>DF</option><option>ES</option>
+          <option>GO</option><option>MA</option><option>MT</option><option>MS</option>
+          <option>MG</option><option>PA</option><option>PB</option><option>PR</option>
+          <option>PE</option><option>PI</option><option>RJ</option><option>RN</option>
+          <option>RS</option><option>RO</option><option>RR</option><option>SC</option>
+          <option>SP</option><option>SE</option><option>TO</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Buscar</label>
+        <input id="stationSearch" type="search" placeholder="nome, código, município ou rio">
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Estação</label>
+      <select id="stationSelect"><option value="">Carregue uma UF</option></select>
+      <div id="stationMeta" class="small">—</div>
+    </div>
+
+    <div class="grid2">
+      <div class="field">
+        <label>Variável</label>
+        <select id="seriesType">
+          <option value="chuva">Chuva</option>
+          <option value="cotas">Cota</option>
+          <option value="vazao">Vazão</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Consistência</label>
+        <select id="consistency">
+          <option value="2">Consistido</option>
+          <option value="1">Bruto</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div class="field"><label>Data inicial</label><input id="dateStart" type="date"></div>
+      <div class="field"><label>Data final</label><input id="dateEnd" type="date"></div>
+    </div>
+
+    <div class="actions">
+      <button id="btnStations" class="primary" type="button">Carregar estações</button>
+      <button id="btnRun" class="primary" type="button">Analisar série</button>
+      <button id="btnCsv" type="button">Baixar CSV</button>
+    </div>
+
+    <div class="msg" id="msgBox">Configure o proxy seguro para começar.</div>
+
+    <div class="miniCard">
+      <div class="miniHeader"><div class="miniTitle">Por que um proxy?</div></div>
+      <div class="small">
+        A API nova da ANA usa identificador/senha para gerar token. Em GitHub Pages, qualquer segredo colocado no JavaScript fica público.
+        O proxy guarda as credenciais no servidor e entrega ao navegador somente os dados.
+      </div>
+    </div>
+  </aside>
+
+  <section class="content anaContent">
+    <div class="card">
+      <div class="cardHeader">
+        <div>
+          <div class="cardTitle" id="chartTitle">Série hidrológica</div>
+          <div class="cardMeta" id="chartMeta">Selecione uma estação.</div>
+        </div>
+      </div>
+      <div class="kpiGrid" id="kpis"></div>
+      <div class="chartWrap anaChart"><canvas id="mainChart"></canvas></div>
+    </div>
+
+    <div class="card">
+      <div class="cardHeader">
+        <div>
+          <div class="cardTitle">Tendência</div>
+          <div class="cardMeta">Mann-Kendall + inclinação de Sen + regressão linear descritiva.</div>
+        </div>
+      </div>
+      <div class="trendSummary" id="trendSummary">—</div>
+    </div>
+
+    <div class="card">
+      <div class="cardHeader">
+        <div class="cardTitle">Dados processados</div>
+        <div class="cardMeta" id="tableMeta">—</div>
+      </div>
+      <div class="tableWrap">
+        <table><thead id="tblHead"></thead><tbody id="tblBody"></tbody></table>
+      </div>
+    </div>
+  </section>
+</main>
+</body>
+</html>
