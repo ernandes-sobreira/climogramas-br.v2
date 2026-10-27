@@ -1,0 +1,48 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap');
+:root{--bg:#f6f8fb;--panel:#fff;--card:#fff;--stroke:#e1e8ed;--stroke2:#cfdee4;--text:#142e40;--muted:#5a7180;--muted2:#7c919c;--blue:#176b87;--cyan:#078b9d;--teal:#117e76;--sun:#d79935}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}body{margin:0;color:var(--text);background:var(--bg);font-family:'DM Sans',Arial,sans-serif;font-size:15px;line-height:1.48;background-image:none}
+button,input,select{font:inherit}button{cursor:pointer}
+.topbar{background:#fff;border-bottom:1px solid var(--stroke);padding:0 4.2%;align-items:center;min-height:78px;box-shadow:0 2px 16px #133c5010}
+.brandTitle{font:800 21px 'Manrope',sans-serif;color:#14364c;letter-spacing:-.8px}
+.brandTitle:before{content:'◉';color:#0e8a91;font-size:23px;padding-right:11px}
+.brandSubtitle{font-size:12px;max-width:760px;color:var(--muted);line-height:1.4}
+.badge{color:#126f77;background:#e7f5f4;border:0;font-size:11px;font-weight:800}
+.topActions{align-items:center;gap:13px}.statusPills{gap:6px}.pill{background:#f4f8fa;border-color:#e5ecef;color:#627988;padding:6px 10px;font-size:11px}
+.helpBtn{background:#fff!important;color:#245166!important;border:1px solid #d6e3e7!important;border-radius:10px!important}
+.intro-hero{padding:44px 4.2% 36px;display:grid;grid-template-columns:minmax(0,1.4fr) minmax(300px,.6fr);gap:25px;align-items:end;background:linear-gradient(116deg,#e5f2f5,#f8faf9 56%,#f1f6ea);border-bottom:1px solid #dce9e9}
+.intro-hero h1{font:800 clamp(30px,4vw,55px)/1.08 'Manrope',sans-serif;letter-spacing:-2px;margin:10px 0 12px;max-width:740px;color:#153d50}
+.intro-hero p{max-width:650px;color:#547081;font-size:16px}
+.intro-kicker{font:800 11px 'Manrope',sans-serif;text-transform:uppercase;letter-spacing:1.9px;color:#17858b}
+.hero-source{padding:18px 20px;background:#ffffffb5;border:1px solid #d7e7e7;border-radius:18px}
+.hero-source b{display:block;font:800 15px 'Manrope',sans-serif;color:#214e5b}
+.hero-source small{display:block;font-size:12px;color:#627e88;margin-top:6px}
+.layout{display:grid;grid-template-columns:minmax(290px,320px) minmax(0,1fr);max-width:1620px;margin:0 auto;padding:26px 3.2% 55px;gap:22px;align-items:start}
+.panel{position:relative;top:0;height:auto;max-height:none;overflow:visible;border:1px solid var(--stroke);background:#fff;box-shadow:0 6px 24px #1d52610a;border-radius:18px;padding:22px}
+.panel h2{font:800 15px 'Manrope',sans-serif;color:#1a3e4d;margin:0 0 17px}
+.field{margin-bottom:15px}label{font-weight:700;font-size:11px;color:#627a84;letter-spacing:.3px;margin-bottom:7px}
+input,select{background:#fff!important;border:1px solid #d7e3e8!important;border-radius:9px!important;color:#1d4357!important;padding:10px 12px!important;min-height:40px}
+input:focus,select:focus{outline:2px solid #78c4ca;outline-offset:1px}
+input::placeholder{color:#9aaeb8}.small{color:#8699a4;font-size:11px}
+.grid2{gap:10px}.modeRow{gap:7px;margin:0 0 7px}.modeBtn{min-width:0;flex:1;border-radius:9px;border:1px solid #e0e8ed;background:#f5f8fa;color:#526c7c;padding:10px 7px;font-size:11px;font-weight:700;line-height:1.25}
+.modeBtn.active{background:#dff3f1;color:#086e74;border-color:#9fd1d0;box-shadow:inset 0 0 0 1px #8dcac5}
+.checks{border-top:1px solid #e7eef0;padding-top:14px;gap:11px}.check{color:#536b78;font-size:12px}.check input{min-height:auto;accent-color:#088f92}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:18px}.actions button{font-size:12px!important;border-radius:10px!important;padding:11px!important;border:1px solid #d6e4e8!important;background:#fff!important;color:#28596b!important}
+.actions .primary{background:#147c86!important;border-color:#147c86!important;color:#fff!important;grid-column:1/-1;font-size:14px!important;padding:13px!important}
+.msg{border:1px solid #dce8ec!important;background:#f6fafb!important;color:#5a7986!important;font-size:12px}
+.content{gap:20px;min-width:0}
+.card{border:1px solid #e0e9ed;background:#fff;box-shadow:0 6px 24px #1d52610a;border-radius:18px}
+.cardHeader{border-bottom:1px solid #e9eff2;padding:22px 26px;align-items:center;gap:20px}
+.cardTitle{font:800 18px 'Manrope',sans-serif;letter-spacing:-.5px;color:#173b4c}
+.cardMeta{font-size:12px;color:#7d929d}.chartWrap{height:clamp(370px,47vw,540px);padding:20px 23px 24px}
+.kpis{gap:8px}.kpi{border:1px solid #dce9ea;background:#f0f7f7;min-width:115px;padding:10px 14px}.kpi .k{color:#577983}.kpi .v{color:#164a58;font:800 16px 'Manrope',sans-serif}
+.tableWrap{max-height:430px}.tableWrap table{color:#25495b}
+table{color:#234456}th{color:#577686;background:#f3f8f9!important}td{border-bottom-color:#e6edef!important}
+.footerNote{color:#8197a1}.miniCard{margin-top:18px;background:#fff!important;border:1px solid #e2ecef!important;border-radius:14px!important;padding:10px!important}.miniTitle{color:#1a4052!important;font-weight:800}.miniMeta{color:#76909c!important}
+#map{height:270px!important;border-radius:10px!important;overflow:hidden}
+.heatLegend{background:#fff;color:#4d6573}.heatLegendLabel,.heatLegendTicks,.heatLegendNote{color:#687e8a!important}
+.modalOverlay{background:#102a3ab8}.modal{background:#fff!important;color:#183c4e!important;border-radius:20px}.modalHeader{background:#f0f7f8!important}.modalTitle,.modalBody{color:#183b4a!important}.modalSub,.modalFoot{color:#647d88!important}
+.section-tag{font:800 10px 'Manrope',sans-serif;text-transform:uppercase;letter-spacing:1.4px;color:#0a878b;margin-bottom:4px}
+@media(max-width:1150px){.layout{grid-template-columns:285px minmax(0,1fr)}.statusPills{display:none}}
+@media(max-width:900px){.intro-hero{grid-template-columns:1fr;padding:30px 5%}.layout{grid-template-columns:1fr;padding:18px 4%}.panel{position:static}.chartWrap{height:380px}.cardHeader{flex-wrap:wrap}}
+@media(max-width:540px){.brandSubtitle{display:none}.intro-hero h1{letter-spacing:-1.2px;font-size:34px}.hero-source{display:none}.panel{padding:16px}.cardHeader{padding:16px}.chartWrap{height:340px;padding:10px}.kpis{justify-content:flex-start}.grid2{grid-template-columns:1fr 1fr}}
