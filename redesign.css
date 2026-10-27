@@ -46,3 +46,14 @@ table{color:#234456}th{color:#577686;background:#f3f8f9!important}td{border-bott
 @media(max-width:1150px){.layout{grid-template-columns:285px minmax(0,1fr)}.statusPills{display:none}}
 @media(max-width:900px){.intro-hero{grid-template-columns:1fr;padding:30px 5%}.layout{grid-template-columns:1fr;padding:18px 4%}.panel{position:static}.chartWrap{height:380px}.cardHeader{flex-wrap:wrap}}
 @media(max-width:540px){.brandSubtitle{display:none}.intro-hero h1{letter-spacing:-1.2px;font-size:34px}.hero-source{display:none}.panel{padding:16px}.cardHeader{padding:16px}.chartWrap{height:340px;padding:10px}.kpis{justify-content:flex-start}.grid2{grid-template-columns:1fr 1fr}}
+
+/* Mapa como explorador territorial principal, fora da coluna de filtros */
+.station-map-card{overflow:hidden}
+.station-map-body{padding:14px 18px 18px}
+.station-map-card #map{height:440px!important;width:100%;border:1px solid #d9e5e9;border-radius:14px!important;background:#e9f1f2}
+.map-source-pill{background:#e3f2f0;color:#14776d;border-radius:999px;padding:8px 13px;font-weight:800;font-size:11px;white-space:nowrap}
+.station-map-card .leaflet-container{font-family:'DM Sans',sans-serif}
+.station-map-card .leaflet-control-zoom{border:none!important;box-shadow:0 4px 12px #153b4a25}
+.station-map-card .leaflet-control-zoom a{color:#1b5366!important}
+@media(max-width:900px){.station-map-card #map{height:390px!important}}
+@media(max-width:540px){.station-map-body{padding:9px}.station-map-card #map{height:310px!important}.map-source-pill{display:none}}
