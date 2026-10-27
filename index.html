@@ -3,9 +3,10 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>climogramas-br v2</title>
+  <title>Climogramas BR | Atlas climático de estações</title>
 
   <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="redesign.css" />
 
   <!-- Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
@@ -20,10 +21,10 @@
 <body>
   <header class="topbar">
     <div class="brand">
-      <div class="brandTitle">climogramas-br <span class="badge">v2</span></div>
+      <div class="brandTitle">Climogramas BR <span class="badge">Atlas climático</span></div>
       <div class="brandSubtitle">
-        Plataforma para explorar séries climáticas (INMET) a partir de JSON mensal/anual por estação/ano.
-        Idealizado por <b>Ernandes Sobreira; Wilkinson Kiwi Lopes Lázaro; Claumir Cesar Muniz</b>. Dados INMET coletados em <b>dez/2025</b>.
+        Atlas interativo de séries climáticas do Brasil · INMET · Estações meteorológicas.
+        Idealizado por <b>Ernandes Sobreira; Wilkinson Kiwi Lopes Lázaro; Claumir Cesar Muniz</b>. Dados de origem INMET; cobertura conforme arquivo de cada estação.
       </div>
     </div>
 
@@ -37,10 +38,16 @@
       </div>
     </div>
   </header>
+  <section class="intro-hero" aria-label="Introdução ao observatório">
+    <div><span class="intro-kicker">OBSERVATÓRIO CLIMÁTICO · BRASIL</span>
+    <h1>O clima do Brasil,<br>em dados e perspectiva.</h1>
+    <p>Explore a temperatura, a precipitação e os padrões de milhares de registros por estação. Compare anos, descubra tendências e exporte visualizações científicas.</p></div>
+    <div class="hero-source"><b>Dados reais, estações georreferenciadas.</b><small>Fonte meteorológica: INMET · Série local disponível até 2024, conforme cobertura de cada estação. ANA/HidroWeb em validação, sem dados incorporados neste painel.</small></div>
+  </section>
 
   <main class="layout">
     <aside class="panel">
-      <h2>Selecionar</h2>
+      <div class="section-tag">01 / Filtros de análise</div><h2>Seu recorte climático</h2>
 
       <div class="grid2">
         <div class="field">
@@ -139,7 +146,7 @@
       <div class="card">
         <div class="cardHeader">
           <div>
-            <div class="cardTitle" id="chartTitle">—</div>
+            <div><div class="section-tag">02 / Visualização científica</div><div class="cardTitle" id="chartTitle">—</div></div>
             <div class="cardMeta" id="chartMeta">—</div>
           </div>
           <div class="kpis" id="kpis"></div>
@@ -167,7 +174,7 @@
 
       <div class="card">
         <div class="cardHeader">
-          <div class="cardTitle">Prévia da tabela</div>
+          <div><div class="section-tag">03 / Dados auditáveis</div><div class="cardTitle">Tabela de resultados</div></div>
           <div class="cardMeta" id="tableMeta">—</div>
         </div>
 
