@@ -29,9 +29,16 @@ jobs:
           python-version: '3.12'
       - name: Atualizar estações de 2026
         run: python tools/sync_inmet.py --years 2026
-      - name: Revisar 2025 sob demanda
-        if: ${{ inputs.ano_anterior == 'true' }}
-        run: python tools/sync_inmet.py --years 2025
+      - name: Completar 2025 automaticamente ou revisar sob demanda
+        env:
+          FORCE_PREVIOUS: ${{ inputs.ano_anterior || 'false' }}
+        run: |
+          COUNT=$(find assets/data -name '2025.json' | wc -l)
+          if [ "$COUNT" -lt 500 ] || [ "$FORCE_PREVIOUS" = "true" ]; then
+            python tools/sync_inmet.py --years 2025
+          else
+            echo "2025 já possui $COUNT séries; preservando arquivo anterior."
+          fi
       - name: Conferir integridade dos JSONs
         run: |
           python - <<'PY'
