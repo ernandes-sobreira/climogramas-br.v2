@@ -26,12 +26,12 @@ spec.loader.exec_module(legacy)
 _orig_parse = legacy.parse_date_time
 def parse_date_time(date_str, hour_str):
     cleaned = str(date_str).strip()
-    if re.fullmatch(r"\\d{4}/\\d{2}/\\d{2}", cleaned):
+    if re.fullmatch(r"\d{4}/\d{2}/\d{2}", cleaned):
         cleaned = cleaned.replace("/", "-")
     return _orig_parse(cleaned, hour_str)
 legacy.parse_date_time = parse_date_time
 URL = "https://portal.inmet.gov.br/uploads/dadoshistoricos/{year}.zip"
-CODE_RE = re.compile(r"^[A-Z]\\d{3,4}$")
+CODE_RE = re.compile(r"^[A-Z]\d{3,4}$")
 
 def download(year):
     req = urllib.request.Request(URL.format(year=year), headers={"User-Agent":"ClimogramasBR-UNEMAT/1.0 (public academic analysis)"})
