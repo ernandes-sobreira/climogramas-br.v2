@@ -22,6 +22,14 @@ ASSETS = ROOT / "assets"
 spec = importlib.util.spec_from_file_location("legacy_inmet", ROOT/"tools"/"build_all_years_inmet.py")
 legacy = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(legacy)
+# INMET altera o formato de data entre séries: incluir AAAA/MM/DD.
+_orig_parse = legacy.parse_date_time
+def parse_date_time(date_str, hour_str):
+    cleaned = str(date_str).strip()
+    if re.fullmatch(r"\\d{4}/\\d{2}/\\d{2}", cleaned):
+        cleaned = cleaned.replace("/", "-")
+    return _orig_parse(cleaned, hour_str)
+legacy.parse_date_time = parse_date_time
 URL = "https://portal.inmet.gov.br/uploads/dadoshistoricos/{year}.zip"
 CODE_RE = re.compile(r"^[A-Z]\\d{3,4}$")
 
