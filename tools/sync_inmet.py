@@ -102,8 +102,22 @@ def main():
             dedup={r["dt"]:r for r in rows}
             rows=sorted(dedup.values(),key=lambda r:r["dt"])
             payload=legacy.build_year_json(metas[code],code,year,rows)
+            # Adaptar o formato do pipeline ao contrato já usado pelo front-end.
+            # Não somar precipitação horária como "total mensal" com cobertura insuficiente.
+            qc=coverage(rows,year)
+            for month in payload["months"]:
+                key=str(month["m"])
+                ctemp=qc[key]["temp"]["coverage_pct"]
+                cprec=qc[key]["prec"]["coverage_pct"]
+                month["tmean"]=month.get("tmean_c") if ctemp is not None and ctemp>=90 else None
+                month["tmin"]=month.get("tmin_c") if ctemp is not None and ctemp>=90 else None
+                month["tmax"]=month.get("tmax_c") if ctemp is not None and ctemp>=90 else None
+                month["p"]=month.get("prec_mm") if cprec is not None and cprec>=90 else None
+            payload["annual"]["tmean"]=payload["annual"].get("tmean_c")
+            payload["annual"]["p_total"]=sum(m["p"] for m in payload["months"] if m["p"] is not None) if sum(m["p"] is not None for m in payload["months"])==12 else None
+            payload["annual"]["coverage"]=round(sum(1 for m in payload["months"] if m["tmean"] is not None)/12,3)
             payload["quality"]={"status":"provisional" if year==dt.date.today().year else "archive",
-                                "monthly_hourly_coverage":coverage(rows,year),
+                                "monthly_hourly_coverage":qc,
                                 "note":"Cobertura calculada por horas observadas; totais de chuva com lacunas não representam totais completos."}
             payload["provenance"]={"source":URL.format(year=year),"zip_sha256":sha,
                                     "processed_utc":dt.datetime.now(dt.timezone.utc).isoformat()}
