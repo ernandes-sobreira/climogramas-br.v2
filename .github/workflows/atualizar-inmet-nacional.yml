@@ -1,0 +1,53 @@
+name: Atualizar INMET nacional e estatísticas
+on:
+  schedule:
+    - cron: '25 11 * * 2,5'
+  workflow_dispatch:
+    inputs:
+      ano_anterior:
+        description: "Reprocessar também 2025 (true/false)"
+        required: false
+        default: "false"
+permissions:
+  contents: write
+concurrency:
+  group: atualizar-inmet-nacional
+  cancel-in-progress: false
+jobs:
+  atualizar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Atualizar estações de 2026
+        run: python tools/sync_inmet.py --years 2026
+      - name: Revisar 2025 sob demanda
+        if: ${{ inputs.ano_anterior == 'true' }}
+        run: python tools/sync_inmet.py --years 2025
+      - name: Conferir integridade dos JSONs
+        run: |
+          python - <<'PY'
+          import json, pathlib
+          stations=json.loads(pathlib.Path('assets/stations.json').read_text())
+          assert len(stations)>100
+          assert all('id' in s and 'years' in s for s in stations)
+          for p in pathlib.Path('assets/data').glob('*/2026.json'):
+              data=json.loads(p.read_text())
+              assert len(data['months'])==12 and 'quality' in data
+          print('Catálogo e séries verificados:',len(stations))
+          PY
+      - name: Publicar dados, preservando o aplicativo
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/stations.json assets/years.json assets/inmet-update-status.json assets/data/
+          if ! git diff --cached --quiet; then
+            git commit -m "data(inmet): atualizar estações e estatísticas"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
