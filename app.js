@@ -364,10 +364,15 @@
 
     updatePills({station: selectedStation ? selectedStation.code : "—", years:"—", data:"—"});
 
-    const years = [];
-    for (let y=2000; y<=2024; y++) years.push(String(y));
+    // Usar anos realmente publicados por estação, sem teto fixo em 2024.
+    const years = [...new Set((selectedStation?.years || []).map(Number).filter(Number.isInteger))]
+      .sort((a,b)=>a-b).map(String);
     fillSelect(yearStart, years, y=>y, y=>y, true);
     fillSelect(yearEnd, years, y=>y, y=>y, true);
+    if (years.length) {
+      if (!years.includes(yearStart.value)) yearStart.value = years[0];
+      if (!years.includes(yearEnd.value)) yearEnd.value = years[years.length-1];
+    }
 
     if (zoom && selectedStation && map){
       map.setView([selectedStation.lat, selectedStation.lon], 7, {animate:true});
