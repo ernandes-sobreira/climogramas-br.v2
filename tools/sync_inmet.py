@@ -63,6 +63,14 @@ def coverage(rows,year):
                             for k in ("temp","prec","rh","press","rad","wind")}
     return result
 
+def station_code(meta, filename):
+    # Nomes INMET usam _A001_ ou _A001_...; \b não funciona junto a underscores.
+    raw = str(meta.get("id") or "").strip().upper()
+    m = re.search(r"(?<![A-Z0-9])([A-Z][0-9]{3,4})(?![A-Z0-9])", raw)
+    if m: return m.group(1)
+    m = re.search(r"(?:^|_)([A-Z][0-9]{3,4})(?:_|\\.|$)", pathlib.Path(filename).name.upper())
+    return m.group(1) if m else None
+
 def main():
     ap=argparse.ArgumentParser()
     ap.add_argument("--years",nargs="+",type=int,default=[dt.date.today().year])
@@ -78,9 +86,12 @@ def main():
         grouped=defaultdict(list)
         metas={}
         bad=0
+        failure_examples=[]
+        zip_csv_count=0
         with zipfile.ZipFile(io.BytesIO(raw)) as z:
             for entry in z.infolist():
                 if not entry.filename.lower().endswith(".csv") or entry.file_size>35_000_000:continue
+                zip_csv_count+=1
                 try:
                     # O leitor legado recebe caminho em disco; diretório temporário isolado.
                     import tempfile
@@ -88,13 +99,17 @@ def main():
                         dest=pathlib.Path(tmp)/"estacao.csv"
                         dest.write_bytes(z.read(entry))
                         meta,rows=legacy.read_inmet_csv(str(dest))
-                    code=legacy.extract_station_id(meta,pathlib.Path(entry.filename).name)
-                    if not code or not CODE_RE.fullmatch(code):continue
+                    code=station_code(meta,entry.filename)
+                    if not code or not CODE_RE.fullmatch(code):
+                        if len(failure_examples)<5: failure_examples.append({"file":entry.filename,"error":"station_code_unrecognized","meta_id":meta.get("id")})
+                        continue
                     grouped[code].extend(r for r in rows if r["dt"].year==year)
                     metas.setdefault(code,meta)
-                except Exception:
+                except Exception as exc:
                     bad+=1
-        if not grouped:raise RuntimeError(f"Nenhuma estação aproveitável no arquivo {year}")
+                    if len(failure_examples)<5: failure_examples.append({"file":entry.filename,"error":type(exc).__name__,"message":str(exc)[:160]})
+        print(json.dumps({"year":year,"zip_csv_files":zip_csv_count,"station_count":len(grouped),"invalid_files":bad,"examples":failure_examples},ensure_ascii=False),flush=True)
+        if not grouped:raise RuntimeError(f"Nenhuma estação aproveitável no arquivo {year}; consultar exemplos acima")
         outcount=0
         for code,rows in grouped.items():
             if not rows:continue
