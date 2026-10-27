@@ -1,5 +1,11 @@
 (() => {
   "use strict";
+  // Paleta legível na nova interface clara; mantém cálculos e dados originais.
+  if (typeof Chart !== "undefined") {
+    Chart.defaults.color = "#456578";
+    Chart.defaults.borderColor = "rgba(49,100,120,.12)";
+    Chart.defaults.font.family = "DM Sans, Arial, sans-serif";
+  }
 
   const $ = (id) => document.getElementById(id);
   const BASE = new URL(".", location.href).toString();
@@ -37,9 +43,9 @@
   function setMsg(text, kind="ok"){
     const box = $("msgBox");
     box.textContent = text;
-    box.style.borderColor = (kind==="err") ? "rgba(251,113,133,.35)" : "rgba(255,255,255,.08)";
-    box.style.background = (kind==="err") ? "rgba(251,113,133,.10)" : "rgba(7,11,22,.35)";
-    box.style.color = (kind==="err") ? "rgba(255,255,255,.92)" : "rgba(255,255,255,.70)";
+    box.style.borderColor = (kind==="err") ? "rgba(251,113,133,.35)" : "rgba(36,91,114,.15)";
+    box.style.background = (kind==="err") ? "rgba(251,113,133,.10)" : "#f4fafb";
+    box.style.color = (kind==="err") ? "#a12e35" : "#567484";
   }
 
   // Downloads robustos
@@ -663,8 +669,8 @@
             interaction:{mode:"index", intersect:false},
             plugins:{ legend:{position:"top"} },
             scales:{
-              x:{ grid:{color:"rgba(255,255,255,.06)"} },
-              y:{ position:"left", title:{display:true, text:labelOfVar(V1)}, grid:{color:"rgba(255,255,255,.06)"} },
+              x:{ grid:{color:"rgba(36,91,114,.10)"} },
+              y:{ position:"left", title:{display:true, text:labelOfVar(V1)}, grid:{color:"rgba(36,91,114,.10)"} },
               yP:{ position:"right", display:showBars, title:{display:showBars, text:"Precipitação (mm)"}, grid:{drawOnChartArea:false} }
             }
           }
@@ -743,8 +749,8 @@
             interaction:{mode:"index", intersect:false},
             plugins:{legend:{position:"top"}},
             scales:{
-              x:{title:{display:true,text:"Ano"}, grid:{color:"rgba(255,255,255,.06)"}},
-              y:{position:"left", title:{display:true, text:labelOfVar(V1)}, grid:{color:"rgba(255,255,255,.06)"}},
+              x:{title:{display:true,text:"Ano"}, grid:{color:"rgba(36,91,114,.10)"}},
+              y:{position:"left", title:{display:true, text:labelOfVar(V1)}, grid:{color:"rgba(36,91,114,.10)"}},
               yP:{position:"right", display:showBars, title:{display:showBars,text:"Precipitação (mm)"}, grid:{drawOnChartArea:false}},
             }
           }
@@ -846,7 +852,7 @@
                 const t = (v - vmin) / (vmax - vmin);
                 return heatColor(t);
               },
-              borderColor: "rgba(255,255,255,.08)",
+              borderColor: "rgba(36,91,114,.15)",
               borderWidth: 1
             }]
           },
@@ -864,12 +870,12 @@
               }
             },
             scales:{
-              x:{title:{display:true,text:"Ano"}, grid:{color:"rgba(255,255,255,.06)"}},
+              x:{title:{display:true,text:"Ano"}, grid:{color:"rgba(36,91,114,.10)"}},
               y:{
                 title:{display:true,text:"Mês"},
                 min:1,max:12,
                 ticks:{callback:(v)=>monthName(v), stepSize:1},
-                grid:{color:"rgba(255,255,255,.06)"}
+                grid:{color:"rgba(36,91,114,.10)"}
               }
             }
           }
@@ -975,8 +981,8 @@
             responsive:true, maintainAspectRatio:false,
             plugins:{ legend:{position:"top"} },
             scales:{
-              x:{ title:{display:true, text:colX}, grid:{color:"rgba(255,255,255,.06)"} },
-              y:{ title:{display:true, text:colY}, grid:{color:"rgba(255,255,255,.06)"} },
+              x:{ title:{display:true, text:colX}, grid:{color:"rgba(36,91,114,.10)"} },
+              y:{ title:{display:true, text:colY}, grid:{color:"rgba(36,91,114,.10)"} },
             }
           }
         });
