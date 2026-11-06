@@ -1,11 +1,11 @@
 {
-  "updated_utc": "2026-10-30T17:06:40.737550+00:00",
+  "updated_utc": "2026-11-06T18:09:32.114103+00:00",
   "years": [
     {
       "year": 2026,
-      "stations": 639,
+      "stations": 634,
       "skipped_files": 0,
-      "source_sha256": "62c3301ddbaa815bd523a34528ab3ded4f1b2ad26189abd6a7ee82d98ded60d4"
+      "source_sha256": "e50640dee9556273fcdf02874fc88518c5a82a377e3780eb0fcdf202cb9006fd"
     }
   ]
 }
