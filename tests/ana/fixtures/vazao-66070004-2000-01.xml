@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="utf-8"?>
+<DataTable xmlns="http://MRCS/">
+  <xs:schema id="NewDataSet" xmlns="" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xs:element name="NewDataSet" msdata:IsDataSet="true" msdata:MainDataTable="SerieHistorica" msdata:UseCurrentLocale="true">
+      <xs:complexType>
+        <xs:choice minOccurs="0" maxOccurs="unbounded">
+          <xs:element name="SerieHistorica">
+            <xs:complexType>
+              <xs:sequence>
+                <xs:element name="EstacaoCodigo" type="xs:int" minOccurs="0" />
+                <xs:element name="NivelConsistencia" type="xs:unsignedByte" minOccurs="0" />
+                <xs:element name="DataHora" type="xs:string" minOccurs="0" />
+                <xs:element name="MediaDiaria" type="xs:string" minOccurs="0" />
+                <xs:element name="MetodoObtencaoVazoes" type="xs:string" minOccurs="0" />
+                <xs:element name="Maxima" type="xs:string" minOccurs="0" />
+                <xs:element name="Minima" type="xs:string" minOccurs="0" />
+                <xs:element name="Media" type="xs:string" minOccurs="0" />
+                <xs:element name="DiaMaxima" type="xs:string" minOccurs="0" />
+                <xs:element name="DiaMinima" type="xs:string" minOccurs="0" />
+                <xs:element name="MaximaStatus" type="xs:string" minOccurs="0" />
+                <xs:element name="MinimaStatus" type="xs:string" minOccurs="0" />
+                <xs:element name="MediaStatus" type="xs:string" minOccurs="0" />
+                <xs:element name="MediaAnual" type="xs:string" minOccurs="0" />
+                <xs:element name="MediaAnualStatus" type="xs:string" minOccurs="0" />
+                <xs:element name="Vazao01" type="xs:string" minOccurs="0" />
+                <xs:element name="Vazao02" type="xs:string" minOccurs="0" />
+                <xs:element name="Vazao03" type="xs:string" minOccurs="0" />
+                <xs:element name="Vazao04" type="xs:string" minOccurs="0" />
+                <xs:element name="Vazao05" type="xs:string" minOccurs="0" />
+                <xs:element name="Vazao06" type="xs:string" minOccurs="0" />
+                <xs:element name="Vazao07" type="xs:string" minOccurs="0" />
+                <xs:element name="Vazao08" type="xs:string" minOccurs="0" />
+                <xs:element name="Vazao09" type="xs:string" minOccurs="0" />
+                <xs:element name="Vazao10" type="xs:string" minOccurs="0" />
+                <xs:element name="Vazao11" type="xs:string" minOccurs="0" />
+                <xs:element name="Vazao12" type="xs:string" minOccurs="0" />
+                <xs:element name="Vazao13" type="xs:string" minOccurs="0" />
+                <xs:element name="Vazao14" type="xs:string" minOccurs="0" />
+                <xs:element name="Vazao15" type="xs:string" minOccurs="0" />
+                <xs:element name="Vazao16" type="xs:string" minOccurs="0" />
+                <xs:element name="Vazao17" type="xs:string" minOccurs="0" />
+                <xs:element name="Vazao18" type="xs:string" minOccurs="0" />
+                <xs:element name="Vazao19" type="xs:string" minOccurs="0" />
+                <xs:element name="Vazao20" type="xs:string" minOccurs="0" />
+                <xs:element name="Vazao21" type="xs:string" minOccurs="0" />
+                <xs:element name="Vazao22" type="xs:string" minOccurs="0" />
+                <xs:element name="Vazao23" type="xs:string" minOccurs="0" />
+                <xs:element name="Vazao24" type="xs:string" minOccurs="0" />
+                <xs:element name="Vazao25" type="xs:string" minOccurs="0" />
+                <xs:element name="Vazao26" type="xs:string" minOccurs="0" />
+                <xs:element name="Vazao27" type="xs:string" minOccurs="0" />
+                <xs:element name="Vazao28" type="xs:string" minOccurs="0" />
+                <xs:element name="Vazao29" type="xs:string" minOccurs="0" />
+                <xs:element name="Vazao30" type="xs:string" minOccurs="0" />
+                <xs:element name="Vazao31" type="xs:string" minOccurs="0" />
+                <xs:element name="Vazao01Status" type="xs:string" minOccurs="0" />
+                <xs:element name="Vazao02Status" type="xs:string" minOccurs="0" />
+                <xs:element name="Vazao03Status" type="xs:string" minOccurs="0" />
+                <xs:element name="Vazao04Status" type="xs:string" minOccurs="0" />
+                <xs:element name="Vazao05Status" type="xs:string" minOccurs="0" />
+                <xs:element name="Vazao06Status" type="xs:string" minOccurs="0" />
+                <xs:element name="Vazao07Status" type="xs:string" minOccurs="0" />
+                <xs:element name="Vazao08Status" type="xs:string" minOccurs="0" />
+                <xs:element name="Vazao09Status" type="xs:string" minOccurs="0" />
+                <xs:element name="Vazao10Status" type="xs:string" minOccurs="0" />
+                <xs:element name="Vazao11Status" type="xs:string" minOccurs="0" />
+                <xs:element name="Vazao12Status" type="xs:string" minOccurs="0" />
+                <xs:element name="Vazao13Status" type="xs:string" minOccurs="0" />
+                <xs:element name="Vazao14Status" type="xs:string" minOccurs="0" />
+                <xs:element name="Vazao15Status" type="xs:string" minOccurs="0" />
+                <xs:element name="Vazao16Status" type="xs:string" minOccurs="0" />
+                <xs:element name="Vazao17Status" type="xs:string" minOccurs="0" />
+                <xs:element name="Vazao18Status" type="xs:string" minOccurs="0" />
+                <xs:element name="Vazao19Status" type="xs:string" minOccurs="0" />
+                <xs:element name="Vazao20Status" type="xs:string" minOccurs="0" />
+                <xs:element name="Vazao21Status" type="xs:string" minOccurs="0" />
+                <xs:element name="Vazao22Status" type="xs:string" minOccurs="0" />
+                <xs:element name="Vazao23Status" type="xs:string" minOccurs="0" />
+                <xs:element name="Vazao24Status" type="xs:string" minOccurs="0" />
+                <xs:element name="Vazao25Status" type="xs:string" minOccurs="0" />
+                <xs:element name="Vazao26Status" type="xs:string" minOccurs="0" />
+                <xs:element name="Vazao27Status" type="xs:string" minOccurs="0" />
+                <xs:element name="Vazao28Status" type="xs:string" minOccurs="0" />
+                <xs:element name="Vazao29Status" type="xs:string" minOccurs="0" />
+                <xs:element name="Vazao30Status" type="xs:string" minOccurs="0" />
+                <xs:element name="Vazao31Status" type="xs:string" minOccurs="0" />
+                <xs:element name="DataIns" type="xs:string" minOccurs="0" />
+              </xs:sequence>
+            </xs:complexType>
+          </xs:element>
+        </xs:choice>
+      </xs:complexType>
+    </xs:element>
+  </xs:schema>
+  <diffgr:diffgram xmlns:msdata="urn:schemas-microsoft-com:xml-msdata" xmlns:diffgr="urn:schemas-microsoft-com:xml-diffgram-v1">
+    <DocumentElement xmlns="">
+      <SerieHistorica diffgr:id="SerieHistorica1" msdata:rowOrder="0">
+        <EstacaoCodigo>66070004</EstacaoCodigo>
+        <NivelConsistencia>2</NivelConsistencia>
+        <DataHora>2000-01-01 00:00:00</DataHora>
+        <MediaDiaria>1</MediaDiaria>
+        <MetodoObtencaoVazoes>1</MetodoObtencaoVazoes>
+        <Maxima>496.333</Maxima>
+        <Minima>406.205</Minima>
+        <Media>432.49</Media>
+        <DiaMaxima>31</DiaMaxima>
+        <DiaMinima>18</DiaMinima>
+        <MaximaStatus>1</MaximaStatus>
+        <MinimaStatus>1</MinimaStatus>
+        <MediaStatus>1</MediaStatus>
+        <MediaAnual />
+        <MediaAnualStatus>0</MediaAnualStatus>
+        <Vazao01>468.591</Vazao01>
+        <Vazao02>463.115</Vazao02>
+        <Vazao03>457.662</Vazao03>
+        <Vazao04>450.429</Vazao04>
+        <Vazao05>443.239</Vazao05>
+        <Vazao06>445.033</Vazao06>
+        <Vazao07>448.628</Vazao07>
+        <Vazao08>446.829</Vazao08>
+        <Vazao09>439.66</Vazao09>
+        <Vazao10>436.092</Vazao10>
+        <Vazao11>430.761</Vazao11>
+        <Vazao12>425.454</Vazao12>
+        <Vazao13>423.69</Vazao13>
+        <Vazao14>421.929</Vazao14>
+        <Vazao15>418.416</Vazao15>
+        <Vazao16>411.421</Vazao16>
+        <Vazao17>407.941</Vazao17>
+        <Vazao18>406.205</Vazao18>
+        <Vazao19>406.205</Vazao19>
+        <Vazao20>409.68</Vazao20>
+        <Vazao21>411.421</Vazao21>
+        <Vazao22>413.166</Vazao22>
+        <Vazao23>411.421</Vazao23>
+        <Vazao24>409.68</Vazao24>
+        <Vazao25>409.68</Vazao25>
+        <Vazao26>413.166</Vazao26>
+        <Vazao27>414.913</Vazao27>
+        <Vazao28>425.454</Vazao28>
+        <Vazao29>457.662</Vazao29>
+        <Vazao30>483.313</Vazao30>
+        <Vazao31>496.333</Vazao31>
+        <Vazao01Status>1</Vazao01Status>
+        <Vazao02Status>1</Vazao02Status>
+        <Vazao03Status>1</Vazao03Status>
+        <Vazao04Status>1</Vazao04Status>
+        <Vazao05Status>1</Vazao05Status>
+        <Vazao06Status>1</Vazao06Status>
+        <Vazao07Status>1</Vazao07Status>
+        <Vazao08Status>1</Vazao08Status>
+        <Vazao09Status>1</Vazao09Status>
+        <Vazao10Status>1</Vazao10Status>
+        <Vazao11Status>1</Vazao11Status>
+        <Vazao12Status>1</Vazao12Status>
+        <Vazao13Status>1</Vazao13Status>
+        <Vazao14Status>1</Vazao14Status>
+        <Vazao15Status>1</Vazao15Status>
+        <Vazao16Status>1</Vazao16Status>
+        <Vazao17Status>1</Vazao17Status>
+        <Vazao18Status>1</Vazao18Status>
+        <Vazao19Status>1</Vazao19Status>
+        <Vazao20Status>1</Vazao20Status>
+        <Vazao21Status>1</Vazao21Status>
+        <Vazao22Status>1</Vazao22Status>
+        <Vazao23Status>1</Vazao23Status>
+        <Vazao24Status>1</Vazao24Status>
+        <Vazao25Status>1</Vazao25Status>
+        <Vazao26Status>1</Vazao26Status>
+        <Vazao27Status>1</Vazao27Status>
+        <Vazao28Status>1</Vazao28Status>
+        <Vazao29Status>1</Vazao29Status>
+        <Vazao30Status>1</Vazao30Status>
+        <Vazao31Status>1</Vazao31Status>
+        <DataIns />
+      </SerieHistorica>
+    </DocumentElement>
+  </diffgr:diffgram>
+</DataTable>

@@ -1178,16 +1178,20 @@
 
   // ANA and INMET use the SAME filters, map, chart and table, never mixed.
   const sourceSelect=$('sourceSelect'),anaType=$('anaType'),anaConsistency=$('anaConsistency');
-  const isAna=()=>sourceSelect.value==='ana';
+  const isAna=()=>sourceSelect.value==='ana'||sourceSelect.value==='ana_recent';
   const BRAZIL_UFS='AC AL AP AM BA CE DF ES GO MA MT MS MG PA PB PR PE PI RJ RN RS RO RR SC SP SE TO'.split(' ');
   let inmetStations=[],sourceEpoch=0,anaBusy=false;
   function clearSourceView(){destroyChart();setKpis([]);tableSet([]);selectedStation=null;stationMeta.textContent='—';chartTitle.textContent='Selecione uma estação';chartMeta.textContent='';updatePills({});}
   async function activateSource(){
     const epoch=++sourceEpoch;stationSelectionVersion++;yearStart.dataset.anaSet='';if(!map)initMap();clearSourceView();searchStation.value='';
     $('anaMainControls').hidden=!isAna();
+    $('anaConsistencyField').hidden=isRecent();$('yearsControls').hidden=isRecent();
+    yearStart.disabled=isRecent();yearEnd.disabled=isRecent();anaConsistency.disabled=isRecent();
+    const rain=anaType.querySelector('option[value="chuva"]');rain.disabled=isRecent();
+    if(isRecent()&&anaType.value==='chuva')anaType.value='cotas';
     [optMinMax,optMean,optPrecBars].forEach(x=>x.disabled=isAna());
-    document.querySelector('.map-source-pill').textContent=isAna()?'ANA · Brasil':'INMET · Brasil';
-    document.querySelectorAll('.modeBtn').forEach(b=>{b.disabled=isAna()&&b.dataset.mode==='rel';});
+    document.querySelector('.map-source-pill').textContent=isRecent()?'ANA · Telemetria Brasil':isAna()?'ANA · Histórico Brasil':'INMET · Brasil';
+    document.querySelectorAll('.modeBtn').forEach(b=>{b.disabled=isRecent()||(isAna()&&b.dataset.mode==='rel');});
     if(isAna()){
       if(mode==='rel')setMode('clim');
       fillSelect(ufSelect,BRAZIL_UFS,x=>x,x=>x,false);ufSelect.value='MT';stations=[];filteredStations=[];
@@ -1195,14 +1199,14 @@
     }else{var1.disabled=false;setMode(mode);stations=inmetStations.slice();const ufs=[...new Set(stations.map(x=>x.uf))].sort();fillSelect(ufSelect,['Todas',...ufs],x=>x,x=>x,false);applyFilters(false);renderMarkers();setMsg('INMET: dados publicados de cada estação.','ok');}
   }
   async function loadAnaCatalog(epoch=++sourceEpoch){
-    if(!isAna())return;const uf=ufSelect.value,type=anaType.value;
+    if(!isAna())return;const uf=ufSelect.value,type=anaType.value,previousCode=selectedStation?.code;
     const controls=[sourceSelect,ufSelect,anaType,stationSelect,searchStation,btnRun];controls.forEach(x=>x.disabled=true);
     stations=[];filteredStations=[];selectedStation=null;fillSelect(stationSelect,[],x=>x,x=>x,false);renderMarkers();
     setMsg(`Carregando inventário ANA de ${uf}...`,'ok');
     try{
-      const raw=await new AnaPublicApi().inventory(uf,type);if(epoch!==sourceEpoch||!isAna())return;
-      stations=raw.map(s=>({code:s.codigoestacao,name:s.Estacao_Nome,uf:s.UF_Estacao,lat:s.Latitude===null||String(s.Latitude).trim()===''?NaN:Number(s.Latitude),lon:s.Longitude===null||String(s.Longitude).trim()===''?NaN:Number(s.Longitude),start:s.Inicio,end:s.Fim,city:s.Municipio_Nome,source:'ANA'}));
-      applyFilters(false);renderMarkers();setMsg(`ANA: ${stations.length} estações em ${uf}. Cadastro não garante série completa; busque sua estação e clique Gerar.`,'ok');
+      const raw=isRecent()?await new AnaRecentApi().inventory(uf):await new AnaPersistentApi().inventory(uf,type);if(epoch!==sourceEpoch||!isAna())return;
+      stations=isRecent()?raw.map(x=>({...x,source:'ANA telemetria'})):raw.map(s=>({code:s.codigoestacao,name:s.Estacao_Nome,uf:s.UF_Estacao,lat:s.Latitude===null||String(s.Latitude).trim()===''?NaN:Number(s.Latitude),lon:s.Longitude===null||String(s.Longitude).trim()===''?NaN:Number(s.Longitude),start:s.Inicio,end:s.Fim,city:s.Municipio_Nome,source:'ANA'}));
+      applyFilters(false);if(previousCode&&stations.some(x=>x.code===previousCode)){stationSelect.value=previousCode;selectStation(previousCode,false);}renderMarkers();setMsg(`ANA: ${stations.length} estações em ${uf}. Cadastro não garante série completa; busque sua estação e clique Gerar.`,'ok');
     }catch(e){setMsg(`Catálogo ANA: ${e.message}. A fonte pode estar temporariamente indisponível.`,'err');}
     finally{controls.forEach(x=>x.disabled=false);}
   }
@@ -1219,17 +1223,19 @@
     // For a newly selected ANA station use the latest complete calendar year, visibly preliminary.
     if(!yearStart.dataset.anaSet){yearStart.value=String(nowYear-1);yearEnd.value=String(nowYear-1);yearStart.dataset.anaSet='yes';}
     fillSelect(var1,[anaType.value],()=>ANAMain.specs[anaType.value].label,x=>x,false);var1.disabled=true;var2.disabled=true;
+    if(isRecent()){yearStart.disabled=true;yearEnd.disabled=true;}
     updatePills({station:code,years:`${yearStart.value}–${yearEnd.value}`,data:'ANA · consulta sob demanda'});
     if(zoom&&selectedStation&&map&&Number.isFinite(selectedStation.lat)&&Number.isFinite(selectedStation.lon))map.setView([selectedStation.lat,selectedStation.lon],7);
   }
   async function runAna(){
+    if(isRecent())return runRecent();
     if(anaBusy)return;if(!selectedStation)return setMsg('Selecione uma estação ANA.','err');
     const y0=Number(yearStart.value),y1=Number(yearEnd.value),type=anaType.value,level=anaConsistency.value,station={...selectedStation},selectedMode=mode;
     if(!yearStart.value||!yearEnd.value||y0>y1||y1-y0>59)return setMsg('Escolha um intervalo válido de até60anos.','err');
     const controls=[sourceSelect,ufSelect,anaType,anaConsistency,stationSelect,searchStation,yearStart,yearEnd,btnRun,btnReset,...document.querySelectorAll('.modeBtn')];controls.forEach(x=>x.disabled=true);anaBusy=true;
     setMsg('Consultando série oficial ANA...','ok');
     try{
-      const points=await new AnaPublicApi().series({type,station:station.code,start:`${y0}-01-01`,end:`${y1}-12-31`,consistency:level});
+      const points=await new AnaPersistentApi().series({type,station:station.code,start:`${y0}-01-01`,end:`${y1}-12-31`,consistency:level});
       if(!points.length){setMsg(`ANA: nenhuma observação real para ${y0}–${y1} no nível ${level}. ${level==='2'?'Pode haver dados brutos: selecione nível1 explicitamente.':'Mude o período ou estação; não preenchemos ausências com zero.'}`,'err');return;}
       const a=ANAMain.aggregate(points,type,y0,y1),unit=a.spec.unit;const observed=a.years.filter(x=>x.dias),last=observed.at(-1);
       setKpis([{k:`${last.ano} · ${type==='chuva'?'total observado':'média observada'}`,v:`${fmt(last.valor)} ${unit}`},{k:`Cobertura ${last.ano}`,v:`${fmt(last.cobertura*100,1)}%`},{k:'Dias reais',v:String(points.length)},{k:'Última medição',v:a.lastDate}]);
@@ -1248,13 +1254,56 @@
       }
       renderChart({data:{labels,datasets},options});tableSet(rows,null,2);
       chartTitle.textContent=`${selectedMode==='clim'?'Climograma mensal':selectedMode==='annual'?'Série anual':'Mapa mensal'} — ${a.spec.label} · ${stationLabel(station)}`;
-      chartMeta.textContent=`ANA pública · ${level==='1'?'BRUTO/PRELIMINAR':'CONSISTIDO'} · ${y0}–${y1} · última observação ${a.lastDate} · consulta sob demanda, não tempo real`;
+      chartMeta.textContent=`ANA pública · ${level==='1'?'BRUTO/PRELIMINAR':'CONSISTIDO'} · ${y0}–${y1} · última observação ${a.lastDate} · ${points.persistence?.snapshots?"acervo automático: "+points.persistence.snapshots+" ano(s)":"consulta direta"}${points.persistence?.stale?' · CACHE PRESERVADO: última consulta falhou ou não confirmou dados; confira a data da medição':''} · última coleta não equivale à última medição`;
       updatePills({station:station.code,years:`${y0}–${y1}`,data:`ANA · nível${level} · ${points.length} dias`});
       lastCsvName=`ANA_${type}_${station.code}_${y0}_${y1}_nivel${level}.csv`;lastPngName=lastCsvName.replace('.csv','.png');
       setMsg(`ANA: ${points.length} dias reais. Valores parciais identificados; meses incompletos não entram na média/heatmap. Sem mistura com INMET.`,'ok');
     }catch(e){setMsg(`ANA: ${e.message}. Gráfico anterior preservado.`,'err');}
     finally{anaBusy=false;controls.forEach(x=>x.disabled=false);document.querySelector('.modeBtn[data-mode="rel"]').disabled=true;var1.disabled=true;var2.disabled=true;}
   }
+
+  const isRecent=()=>sourceSelect.value==='ana_recent';
+  async function runRecent(){
+    if(anaBusy||!selectedStation)return;
+    const station={...selectedStation},type=anaType.value==='vazao'?'vazao':'cotas',field=type==='vazao'?'flow_m3_s':'level_cm',unit=type==='vazao'?'m³/s':'cm';
+    const controls=[sourceSelect,ufSelect,anaType,anaConsistency,stationSelect,searchStation,yearStart,yearEnd,btnRun,btnReset,...document.querySelectorAll('.modeBtn')];controls.forEach(x=>x.disabled=true);anaBusy=true;
+    setMsg('Consultando telemetria recente da ANA; sem misturar com a série histórica.','ok');
+    try{
+      const response=await new AnaRecentApi().series(station.code);const records=response.records||[];
+      const valid=records.filter(x=>Number.isFinite(x[field]));
+      if(!valid.length){setMsg(`Sem leitura recente de ${type==='vazao'?'vazão':'nível'} para esta estação no período consultado. Estação catalogada não garante leitura disponível.`,'err');return;}
+      const last=valid.at(-1);heatLegend.style.display='none';
+      renderChart({data:{labels:valid.map(x=>x.datetime_raw),datasets:[{type:'line',label:`${type==='vazao'?'Vazão':'Nível'} informado (${unit}) · telemetria preliminar`,data:valid.map(x=>x[field]),borderWidth:2,pointRadius:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top'}},scales:{x:{ticks:{maxTicksLimit:6},title:{display:true,text:'Horário publicado pela fonte (fuso não declarado)'}},y:{title:{display:true,text:unit}}}}});
+      tableSet(records.map(x=>({horario_publicado:x.datetime_raw,nivel_cm:x.level_cm,vazao_m3_s:x.flow_m3_s})),null,2);
+      setKpis([{k:'Último valor informado',v:`${fmt(last[field])} ${unit}`},{k:'Horário da medição',v:last.datetime_raw},{k:'Leituras válidas',v:String(valid.length)},{k:'Origem',v:response.transport||'ANA pública'}]);
+      chartTitle.textContent=`Telemetria recente — ${stationLabel(station)}`;
+      chartMeta.textContent=`Fonte ANA telemétrica separada do histórico convencional · horário original, sem conversão de fuso · sem QC validado${response.stale?' · CACHE ANTIGO: fonte indisponível':''}`;
+      updatePills({station:station.code,years:'Telemetria recente',data:`${valid.length} leituras · ${response.stale?'cache antigo':'verificado'}`});
+      lastCsvName=`ANA_telemetria_${station.code}.csv`;lastPngName=lastCsvName.replace('.csv','.png');
+      setMsg('Leituras recentes informadas pela ANA. Nível é cota na referência da estação, não profundidade. Chuva telemétrica não é somada nem inserida nos climogramas.','ok');
+    }catch(e){setMsg(`Telemetria: ${e.message}. Gráfico anterior preservado.`,'err');}
+    finally{anaBusy=false;controls.forEach(x=>x.disabled=false);document.querySelectorAll('.modeBtn').forEach(x=>x.disabled=true);yearStart.disabled=true;yearEnd.disabled=true;anaConsistency.disabled=true;var1.disabled=true;var2.disabled=true;}
+  }
+
+  window.addEventListener('climogramas-data-updated',async()=>{
+    if(document.visibilityState!=='visible'||anaBusy||!selectedStation||!lastRows.length)return;
+    if(isAna())runAna();else{
+      const epoch=sourceEpoch,selectionVersion=stationSelectionVersion,code=selectedStation.code,uf=ufSelect.value;
+      try{
+        const raw=await fetchJson(new URL('stations.json',ASSETS).toString());
+        if(epoch!==sourceEpoch||isAna()||selectionVersion!==stationSelectionVersion)return;
+        const list=Array.isArray(raw)?raw:(raw.stations||[]);
+        inmetStations=list.map(s=>({code:s.code||s.id,name:String(s.name||s.nome||'—').replace(/^;+/, '').trim(),uf:String(s.uf||s.UF||'—').trim().toUpperCase(),years:(s.years||[]).map(Number).filter(Number.isInteger).sort((a,b)=>a-b),lat:Number(s.lat??s.latitude),lon:Number(s.lon??s.longitude)})).filter(s=>s.code);
+        stations=inmetStations.slice();fillSelect(ufSelect,['Todas',...[...new Set(stations.map(s=>s.uf))].sort()],x=>x,x=>x,false);ufSelect.value=uf;
+        const q=searchStation.value.trim().toLowerCase();filteredStations=stations.filter(s=>(uf==='Todas'||s.uf===uf)&&(!q||`${s.code} ${s.name}`.toLowerCase().includes(q)));
+        fillSelect(stationSelect,filteredStations,s=>`${s.code} · ${s.name} (${s.uf})`,s=>s.code,false);
+        const refreshed=filteredStations.find(s=>s.code===code);if(!refreshed){setMsg('Catálogo atualizado; estação anterior não está nesta seleção. Escolha uma estação.','err');return;}
+        stationSelect.value=code;selectedStation=refreshed;stationSelectionVersion++;
+        const years=refreshed.years.map(String);fillSelect(yearStart,years,x=>x,x=>x,true);fillSelect(yearEnd,years,x=>x,x=>x,true);
+        renderMarkers();packCache.clear();existsCache.clear();run();
+      }catch{setMsg('Atualização do catálogo INMET indisponível; resultado anterior preservado.','err');}
+    }
+  });
 
   sourceSelect.addEventListener("change",activateSource);
   anaType.addEventListener("change",()=>{searchStation.value="";loadAnaCatalog();});

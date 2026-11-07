@@ -1,0 +1,149 @@
+<NewDataSet xmlns:ns0="urn:schemas-microsoft-com:xml-diffgram-v1" xmlns:ns1="urn:schemas-microsoft-com:xml-msdata"><Table ns0:id="Table1" ns1:rowOrder="0">
+        <BaciaCodigo>1</BaciaCodigo>
+        <SubBaciaCodigo>12</SubBaciaCodigo>
+        <RioCodigo />
+        <RioNome />
+        <EstadoCodigo>2</EstadoCodigo>
+        <nmEstado>ACRE</nmEstado>
+        <MunicipioCodigo>2011000</MunicipioCodigo>
+        <nmMunicipio>TARAUACÁ</nmMunicipio>
+        <ResponsavelCodigo>1</ResponsavelCodigo>
+        <ResponsavelSigla>ANA</ResponsavelSigla>
+        <ResponsavelUnidade>27</ResponsavelUnidade>
+        <ResponsavelJurisdicao>1</ResponsavelJurisdicao>
+        <OperadoraCodigo>500</OperadoraCodigo>
+        <OperadoraSigla>ÁGUA E SOLO</OperadoraSigla>
+        <OperadoraUnidade>2</OperadoraUnidade>
+        <OperadoraSubUnidade>1</OperadoraSubUnidade>
+        <TipoEstacao>2</TipoEstacao>
+        <Codigo>771001</Codigo>
+        <Nome>FAZENDA PARANACRE</Nome>
+        <CodigoAdicional />
+        <Latitude>-7.9511</Latitude>
+        <Longitude>-71.4822</Longitude>
+        <Altitude />
+        <AreaDrenagem />
+        <TipoEstacaoEscala>0</TipoEstacaoEscala>
+        <TipoEstacaoRegistradorNivel>0</TipoEstacaoRegistradorNivel>
+        <TipoEstacaoDescLiquida>0</TipoEstacaoDescLiquida>
+        <TipoEstacaoSedimentos>0</TipoEstacaoSedimentos>
+        <TipoEstacaoQualAgua>0</TipoEstacaoQualAgua>
+        <TipoEstacaoPluviometro>1</TipoEstacaoPluviometro>
+        <TipoEstacaoRegistradorChuva>0</TipoEstacaoRegistradorChuva>
+        <TipoEstacaoTanqueEvapo>0</TipoEstacaoTanqueEvapo>
+        <TipoEstacaoClimatologica>0</TipoEstacaoClimatologica>
+        <TipoEstacaoPiezometria>0</TipoEstacaoPiezometria>
+        <TipoEstacaoTelemetrica>0</TipoEstacaoTelemetrica>
+        <PeriodoEscalaInicio />
+        <PeriodoEscalaFim />
+        <PeriodoRegistradorNivelInicio />
+        <PeriodoRegistradorNivelFim />
+        <PeriodoDescLiquidaInicio />
+        <PeriodoDescLiquidaFim />
+        <PeriodoSedimentosInicio />
+        <PeriodoSedimentosFim />
+        <PeriodoQualAguaInicio />
+        <PeriodoQualAguaFim />
+        <PeriodoPluviometroInicio>1982-06-01 00:00:00</PeriodoPluviometroInicio>
+        <PeriodoPluviometroFim />
+        <PeriodoRegistradorChuvaInicio />
+        <PeriodoRegistradorChuvaFim />
+        <PeriodoTanqueEvapoInicio />
+        <PeriodoTanqueEvapoFim />
+        <PeriodoClimatologicaInicio />
+        <PeriodoClimatologicaFim />
+        <PeriodoPiezometriaInicio />
+        <PeriodoPiezometriaFim />
+        <PeriodoTelemetricaInicio>2005-09-01 00:00:00</PeriodoTelemetricaInicio>
+        <PeriodoTelemetricaFim>2012-02-01 00:00:00</PeriodoTelemetricaFim>
+        <TipoRedeBasica>1</TipoRedeBasica>
+        <TipoRedeEnergetica>0</TipoRedeEnergetica>
+        <TipoRedeNavegacao>0</TipoRedeNavegacao>
+        <TipoRedeCursoDagua>0</TipoRedeCursoDagua>
+        <TipoRedeEstrategica>0</TipoRedeEstrategica>
+        <TipoRedeCaptacao>7</TipoRedeCaptacao>
+        <TipoRedeSedimentos>0</TipoRedeSedimentos>
+        <TipoRedeQualAgua>0</TipoRedeQualAgua>
+        <TipoRedeClasseVazao>0</TipoRedeClasseVazao>
+        <UltimaAtualizacao>2022-04-06 00:00:00</UltimaAtualizacao>
+        <Operando>1</Operando>
+        <Descricao />
+        <NumImagens>1</NumImagens>
+        <DataIns />
+        <DataAlt>2022-04-06 00:00:00</DataAlt>
+      </Table>
+      <Table ns0:id="Table77" ns1:rowOrder="76">
+        <BaciaCodigo>1</BaciaCodigo>
+        <SubBaciaCodigo>12</SubBaciaCodigo>
+        <RioCodigo>12200000</RioCodigo>
+        <RioNome>RIO JURUÁ</RioNome>
+        <EstadoCodigo>2</EstadoCodigo>
+        <nmEstado>ACRE</nmEstado>
+        <MunicipioCodigo>2006200</MunicipioCodigo>
+        <nmMunicipio>MARECHAL THAUMATURG</nmMunicipio>
+        <ResponsavelCodigo>1</ResponsavelCodigo>
+        <ResponsavelSigla>ANA</ResponsavelSigla>
+        <ResponsavelUnidade>27</ResponsavelUnidade>
+        <ResponsavelJurisdicao>1</ResponsavelJurisdicao>
+        <OperadoraCodigo>500</OperadoraCodigo>
+        <OperadoraSigla>ÁGUA E SOLO</OperadoraSigla>
+        <OperadoraUnidade>2</OperadoraUnidade>
+        <OperadoraSubUnidade>1</OperadoraSubUnidade>
+        <TipoEstacao>1</TipoEstacao>
+        <Codigo>12360000</Codigo>
+        <Nome>FOZ DO BREU</Nome>
+        <CodigoAdicional />
+        <Latitude>-9.4097</Latitude>
+        <Longitude>-72.7158</Longitude>
+        <Altitude />
+        <AreaDrenagem>7690</AreaDrenagem>
+        <TipoEstacaoEscala>1</TipoEstacaoEscala>
+        <TipoEstacaoRegistradorNivel>0</TipoEstacaoRegistradorNivel>
+        <TipoEstacaoDescLiquida>1</TipoEstacaoDescLiquida>
+        <TipoEstacaoSedimentos>0</TipoEstacaoSedimentos>
+        <TipoEstacaoQualAgua>1</TipoEstacaoQualAgua>
+        <TipoEstacaoPluviometro>0</TipoEstacaoPluviometro>
+        <TipoEstacaoRegistradorChuva>0</TipoEstacaoRegistradorChuva>
+        <TipoEstacaoTanqueEvapo>0</TipoEstacaoTanqueEvapo>
+        <TipoEstacaoClimatologica>0</TipoEstacaoClimatologica>
+        <TipoEstacaoPiezometria>0</TipoEstacaoPiezometria>
+        <TipoEstacaoTelemetrica>0</TipoEstacaoTelemetrica>
+        <PeriodoEscalaInicio>1982-06-01 00:00:00</PeriodoEscalaInicio>
+        <PeriodoEscalaFim />
+        <PeriodoRegistradorNivelInicio />
+        <PeriodoRegistradorNivelFim />
+        <PeriodoDescLiquidaInicio>1982-06-01 00:00:00</PeriodoDescLiquidaInicio>
+        <PeriodoDescLiquidaFim />
+        <PeriodoSedimentosInicio />
+        <PeriodoSedimentosFim />
+        <PeriodoQualAguaInicio>2016-10-01 00:00:00</PeriodoQualAguaInicio>
+        <PeriodoQualAguaFim />
+        <PeriodoPluviometroInicio />
+        <PeriodoPluviometroFim />
+        <PeriodoRegistradorChuvaInicio />
+        <PeriodoRegistradorChuvaFim />
+        <PeriodoTanqueEvapoInicio />
+        <PeriodoTanqueEvapoFim />
+        <PeriodoClimatologicaInicio />
+        <PeriodoClimatologicaFim />
+        <PeriodoPiezometriaInicio />
+        <PeriodoPiezometriaFim />
+        <PeriodoTelemetricaInicio>2001-08-01 00:00:00</PeriodoTelemetricaInicio>
+        <PeriodoTelemetricaFim>2012-04-01 00:00:00</PeriodoTelemetricaFim>
+        <TipoRedeBasica>1</TipoRedeBasica>
+        <TipoRedeEnergetica>0</TipoRedeEnergetica>
+        <TipoRedeNavegacao>0</TipoRedeNavegacao>
+        <TipoRedeCursoDagua>2</TipoRedeCursoDagua>
+        <TipoRedeEstrategica>0</TipoRedeEstrategica>
+        <TipoRedeCaptacao>7</TipoRedeCaptacao>
+        <TipoRedeSedimentos>1</TipoRedeSedimentos>
+        <TipoRedeQualAgua>0</TipoRedeQualAgua>
+        <TipoRedeClasseVazao>1</TipoRedeClasseVazao>
+        <UltimaAtualizacao>2023-09-08 00:00:00</UltimaAtualizacao>
+        <Operando>1</Operando>
+        <Descricao>RHNR</Descricao>
+        <NumImagens>1</NumImagens>
+        <DataIns />
+        <DataAlt>2023-09-08 00:00:00</DataAlt>
+      </Table>
+      </NewDataSet>

@@ -1,20 +1,25 @@
 name: Atualizar INMET nacional e estatísticas
 on:
-  push:
-    branches: [main]
-    paths: ['.github/workflows/atualizar-inmet-nacional.yml']
   schedule:
-    - cron: '25 11 * * 2,5'
+    # 07:25 em Mato Grosso (UTC-4); GitHub pode atrasar execuções agendadas.
+    - cron: '25 11 * * *'
   workflow_dispatch:
     inputs:
       ano_anterior:
-        description: "Reprocessar também 2025 (true/false)"
+        description: "Consultar também o ano anterior (sem reprocessar SHA idêntico)"
+        type: boolean
         required: false
-        default: "false"
+        default: false
+      forcar_reprocessamento:
+        description: "Reprocessar SHA idêntico após mudança de algoritmo ou auditoria"
+        type: boolean
+        required: false
+        default: false
 permissions:
   contents: write
+  pages: write
 concurrency:
-  group: atualizar-inmet-nacional
+  group: climogramas-data-sync
   cancel-in-progress: false
 jobs:
   atualizar:
@@ -22,42 +27,58 @@ jobs:
     timeout-minutes: 180
     steps:
       - uses: actions/checkout@v4
-        with:
-          persist-credentials: true
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Atualizar estações de 2026
-        run: python tools/sync_inmet.py --years 2026
-      - name: Completar 2025 automaticamente ou revisar sob demanda
+      - name: Validar sincronizador sem rede
+        run: python -m unittest discover -s tests -p 'test_sync_inmet.py'
+      - name: Consultar ano atual e revisão mensal do anterior
+        id: sync
+        continue-on-error: true
         env:
-          FORCE_PREVIOUS: ${{ inputs.ano_anterior || 'false' }}
+          INCLUDE_PREVIOUS: ${{ inputs.ano_anterior || 'false' }}
+          FORCE: ${{ inputs.forcar_reprocessamento || 'false' }}
         run: |
-          COUNT=$(find assets/data -name '2025.json' | wc -l)
-          if [ "$COUNT" -lt 500 ] || [ "$FORCE_PREVIOUS" = "true" ]; then
-            python tools/sync_inmet.py --years 2025
-          else
-            echo "2025 já possui $COUNT séries; preservando arquivo anterior."
+          YEAR=$(date -u +%Y)
+          YEARS="$YEAR"
+          if [ "$(date -u +%d)" = "01" ] || [ "$INCLUDE_PREVIOUS" = "true" ]; then
+            YEARS="$((YEAR-1)) $YEAR"
           fi
+          EXTRA=""
+          if [ "$FORCE" = "true" ]; then EXTRA="--force"; fi
+          python tools/sync_inmet.py --years $YEARS $EXTRA
       - name: Conferir integridade dos JSONs
         run: |
           python - <<'PY'
-          import json, pathlib
+          import datetime, json, pathlib
           stations=json.loads(pathlib.Path('assets/stations.json').read_text())
           assert len(stations)>100
           assert all('id' in s and 'years' in s for s in stations)
-          for p in pathlib.Path('assets/data').glob('*/2026.json'):
-              data=json.loads(p.read_text())
-              assert len(data['months'])==12 and 'quality' in data
-          print('Catálogo e séries verificados:',len(stations))
+          current=datetime.datetime.now(datetime.timezone.utc).year
+          for year in (current-1,current):
+              for p in pathlib.Path('assets/data').glob(f'*/{year}.json'):
+                  data=json.loads(p.read_text())
+                  assert len(data['months'])==12 and 'quality' in data
+          status=json.loads(pathlib.Path('assets/inmet-update-status.json').read_text())
+          assert status.get('checked_utc') and isinstance(status.get('years'),list)
+          print('Catálogo, séries e estado verificados:',len(stations))
           PY
-      - name: Publicar dados, preservando o aplicativo
+      - name: Publicar dados válidos e estado de verificação, preservando o aplicativo
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add assets/stations.json assets/years.json assets/inmet-update-status.json assets/data/
           if ! git diff --cached --quiet; then
-            git commit -m "data(inmet): atualizar estações e estatísticas"
+            git commit -m "data(inmet): verificação diária nacional e atualização quando disponível"
             git pull --rebase origin main
             git push origin HEAD:main
           fi
+      - name: Solicitar e verificar build do Pages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash scripts/request_pages_build.sh
+      - name: Sinalizar falha sem apagar o último resultado
+        if: steps.sync.outcome != 'success'
+        run: |
+          echo 'Consulta/processamento falhou; dados anteriores preservados e estado publicado.'
+          exit 1

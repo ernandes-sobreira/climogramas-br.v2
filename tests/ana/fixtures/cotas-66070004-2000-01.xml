@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="utf-8"?>
+<DataTable xmlns="http://MRCS/">
+  <xs:schema id="NewDataSet" xmlns="" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xs:element name="NewDataSet" msdata:IsDataSet="true" msdata:MainDataTable="SerieHistorica" msdata:UseCurrentLocale="true">
+      <xs:complexType>
+        <xs:choice minOccurs="0" maxOccurs="unbounded">
+          <xs:element name="SerieHistorica">
+            <xs:complexType>
+              <xs:sequence>
+                <xs:element name="EstacaoCodigo" type="xs:int" minOccurs="0" />
+                <xs:element name="NivelConsistencia" type="xs:unsignedByte" minOccurs="0" />
+                <xs:element name="DataHora" type="xs:string" minOccurs="0" />
+                <xs:element name="MediaDiaria" type="xs:unsignedByte" minOccurs="0" />
+                <xs:element name="TipoMedicaoCotas" type="xs:unsignedByte" minOccurs="0" />
+                <xs:element name="Maxima" type="xs:float" minOccurs="0" />
+                <xs:element name="Minima" type="xs:float" minOccurs="0" />
+                <xs:element name="Media" type="xs:float" minOccurs="0" />
+                <xs:element name="DiaMaxima" type="xs:unsignedByte" minOccurs="0" />
+                <xs:element name="DiaMinima" type="xs:unsignedByte" minOccurs="0" />
+                <xs:element name="MaximaStatus" type="xs:unsignedByte" minOccurs="0" />
+                <xs:element name="MinimaStatus" type="xs:unsignedByte" minOccurs="0" />
+                <xs:element name="MediaStatus" type="xs:unsignedByte" minOccurs="0" />
+                <xs:element name="MediaAnual" type="xs:float" minOccurs="0" />
+                <xs:element name="MediaAnualStatus" type="xs:unsignedByte" minOccurs="0" />
+                <xs:element name="Cota01" type="xs:float" minOccurs="0" />
+                <xs:element name="Cota02" type="xs:float" minOccurs="0" />
+                <xs:element name="Cota03" type="xs:float" minOccurs="0" />
+                <xs:element name="Cota04" type="xs:float" minOccurs="0" />
+                <xs:element name="Cota05" type="xs:float" minOccurs="0" />
+                <xs:element name="Cota06" type="xs:float" minOccurs="0" />
+                <xs:element name="Cota07" type="xs:float" minOccurs="0" />
+                <xs:element name="Cota08" type="xs:float" minOccurs="0" />
+                <xs:element name="Cota09" type="xs:float" minOccurs="0" />
+                <xs:element name="Cota10" type="xs:float" minOccurs="0" />
+                <xs:element name="Cota11" type="xs:float" minOccurs="0" />
+                <xs:element name="Cota12" type="xs:float" minOccurs="0" />
+                <xs:element name="Cota13" type="xs:float" minOccurs="0" />
+                <xs:element name="Cota14" type="xs:float" minOccurs="0" />
+                <xs:element name="Cota15" type="xs:float" minOccurs="0" />
+                <xs:element name="Cota16" type="xs:float" minOccurs="0" />
+                <xs:element name="Cota17" type="xs:float" minOccurs="0" />
+                <xs:element name="Cota18" type="xs:float" minOccurs="0" />
+                <xs:element name="Cota19" type="xs:float" minOccurs="0" />
+                <xs:element name="Cota20" type="xs:float" minOccurs="0" />
+                <xs:element name="Cota21" type="xs:float" minOccurs="0" />
+                <xs:element name="Cota22" type="xs:float" minOccurs="0" />
+                <xs:element name="Cota23" type="xs:float" minOccurs="0" />
+                <xs:element name="Cota24" type="xs:float" minOccurs="0" />
+                <xs:element name="Cota25" type="xs:float" minOccurs="0" />
+                <xs:element name="Cota26" type="xs:float" minOccurs="0" />
+                <xs:element name="Cota27" type="xs:float" minOccurs="0" />
+                <xs:element name="Cota28" type="xs:float" minOccurs="0" />
+                <xs:element name="Cota29" type="xs:float" minOccurs="0" />
+                <xs:element name="Cota30" type="xs:float" minOccurs="0" />
+                <xs:element name="Cota31" type="xs:float" minOccurs="0" />
+                <xs:element name="Cota01Status" type="xs:unsignedByte" minOccurs="0" />
+                <xs:element name="Cota02Status" type="xs:unsignedByte" minOccurs="0" />
+                <xs:element name="Cota03Status" type="xs:unsignedByte" minOccurs="0" />
+                <xs:element name="Cota04Status" type="xs:unsignedByte" minOccurs="0" />
+                <xs:element name="Cota05Status" type="xs:unsignedByte" minOccurs="0" />
+                <xs:element name="Cota06Status" type="xs:unsignedByte" minOccurs="0" />
+                <xs:element name="Cota07Status" type="xs:unsignedByte" minOccurs="0" />
+                <xs:element name="Cota08Status" type="xs:unsignedByte" minOccurs="0" />
+                <xs:element name="Cota09Status" type="xs:unsignedByte" minOccurs="0" />
+                <xs:element name="Cota10Status" type="xs:unsignedByte" minOccurs="0" />
+                <xs:element name="Cota11Status" type="xs:unsignedByte" minOccurs="0" />
+                <xs:element name="Cota12Status" type="xs:unsignedByte" minOccurs="0" />
+                <xs:element name="Cota13Status" type="xs:unsignedByte" minOccurs="0" />
+                <xs:element name="Cota14Status" type="xs:unsignedByte" minOccurs="0" />
+                <xs:element name="Cota15Status" type="xs:unsignedByte" minOccurs="0" />
+                <xs:element name="Cota16Status" type="xs:unsignedByte" minOccurs="0" />
+                <xs:element name="Cota17Status" type="xs:unsignedByte" minOccurs="0" />
+                <xs:element name="Cota18Status" type="xs:unsignedByte" minOccurs="0" />
+                <xs:element name="Cota19Status" type="xs:unsignedByte" minOccurs="0" />
+                <xs:element name="Cota20Status" type="xs:unsignedByte" minOccurs="0" />
+                <xs:element name="Cota21Status" type="xs:unsignedByte" minOccurs="0" />
+                <xs:element name="Cota22Status" type="xs:unsignedByte" minOccurs="0" />
+                <xs:element name="Cota23Status" type="xs:unsignedByte" minOccurs="0" />
+                <xs:element name="Cota24Status" type="xs:unsignedByte" minOccurs="0" />
+                <xs:element name="Cota25Status" type="xs:unsignedByte" minOccurs="0" />
+                <xs:element name="Cota26Status" type="xs:unsignedByte" minOccurs="0" />
+                <xs:element name="Cota27Status" type="xs:unsignedByte" minOccurs="0" />
+                <xs:element name="Cota28Status" type="xs:unsignedByte" minOccurs="0" />
+                <xs:element name="Cota29Status" type="xs:unsignedByte" minOccurs="0" />
+                <xs:element name="Cota30Status" type="xs:unsignedByte" minOccurs="0" />
+                <xs:element name="Cota31Status" type="xs:unsignedByte" minOccurs="0" />
+                <xs:element name="DataIns" type="xs:string" minOccurs="0" />
+              </xs:sequence>
+            </xs:complexType>
+          </xs:element>
+        </xs:choice>
+      </xs:complexType>
+    </xs:element>
+  </xs:schema>
+  <diffgr:diffgram xmlns:msdata="urn:schemas-microsoft-com:xml-msdata" xmlns:diffgr="urn:schemas-microsoft-com:xml-diffgram-v1">
+    <DocumentElement xmlns="">
+      <SerieHistorica diffgr:id="SerieHistorica1" msdata:rowOrder="0">
+        <EstacaoCodigo>66070004</EstacaoCodigo>
+        <NivelConsistencia>2</NivelConsistencia>
+        <DataHora>2000-01-01 00:00:00</DataHora>
+        <MediaDiaria>1</MediaDiaria>
+        <TipoMedicaoCotas>1</TipoMedicaoCotas>
+        <Maxima>299</Maxima>
+        <Minima>249</Minima>
+        <Media>263.8387</Media>
+        <DiaMaxima>31</DiaMaxima>
+        <DiaMinima>18</DiaMinima>
+        <MaximaStatus>1</MaximaStatus>
+        <MinimaStatus>1</MinimaStatus>
+        <MediaStatus>1</MediaStatus>
+        <MediaAnual>0</MediaAnual>
+        <MediaAnualStatus>0</MediaAnualStatus>
+        <Cota01>284</Cota01>
+        <Cota02>281</Cota02>
+        <Cota03>278</Cota03>
+        <Cota04>274</Cota04>
+        <Cota05>270</Cota05>
+        <Cota06>271</Cota06>
+        <Cota07>273</Cota07>
+        <Cota08>272</Cota08>
+        <Cota09>268</Cota09>
+        <Cota10>266</Cota10>
+        <Cota11>263</Cota11>
+        <Cota12>260</Cota12>
+        <Cota13>259</Cota13>
+        <Cota14>258</Cota14>
+        <Cota15>256</Cota15>
+        <Cota16>252</Cota16>
+        <Cota17>250</Cota17>
+        <Cota18>249</Cota18>
+        <Cota19>249</Cota19>
+        <Cota20>251</Cota20>
+        <Cota21>252</Cota21>
+        <Cota22>253</Cota22>
+        <Cota23>252</Cota23>
+        <Cota24>251</Cota24>
+        <Cota25>251</Cota25>
+        <Cota26>253</Cota26>
+        <Cota27>254</Cota27>
+        <Cota28>260</Cota28>
+        <Cota29>278</Cota29>
+        <Cota30>292</Cota30>
+        <Cota31>299</Cota31>
+        <Cota01Status>1</Cota01Status>
+        <Cota02Status>1</Cota02Status>
+        <Cota03Status>1</Cota03Status>
+        <Cota04Status>1</Cota04Status>
+        <Cota05Status>1</Cota05Status>
+        <Cota06Status>1</Cota06Status>
+        <Cota07Status>1</Cota07Status>
+        <Cota08Status>1</Cota08Status>
+        <Cota09Status>1</Cota09Status>
+        <Cota10Status>1</Cota10Status>
+        <Cota11Status>1</Cota11Status>
+        <Cota12Status>1</Cota12Status>
+        <Cota13Status>1</Cota13Status>
+        <Cota14Status>1</Cota14Status>
+        <Cota15Status>1</Cota15Status>
+        <Cota16Status>1</Cota16Status>
+        <Cota17Status>1</Cota17Status>
+        <Cota18Status>1</Cota18Status>
+        <Cota19Status>1</Cota19Status>
+        <Cota20Status>1</Cota20Status>
+        <Cota21Status>1</Cota21Status>
+        <Cota22Status>1</Cota22Status>
+        <Cota23Status>1</Cota23Status>
+        <Cota24Status>1</Cota24Status>
+        <Cota25Status>1</Cota25Status>
+        <Cota26Status>1</Cota26Status>
+        <Cota27Status>1</Cota27Status>
+        <Cota28Status>1</Cota28Status>
+        <Cota29Status>1</Cota29Status>
+        <Cota30Status>1</Cota30Status>
+        <Cota31Status>1</Cota31Status>
+        <DataIns />
+      </SerieHistorica>
+    </DocumentElement>
+  </diffgr:diffgram>
+</DataTable>

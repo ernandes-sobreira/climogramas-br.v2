@@ -16,9 +16,12 @@
   <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
   <!-- App -->
-  <script defer src="ana-beta/ana-public.js?v=main-ana-20261107b"></script>
-  <script defer src="ana-main-data.js?v=main-ana-20261107b"></script>
-  <script defer src="app.js?v=main-ana-20261107b"></script>
+  <script defer src="ana-beta/ana-public.js?v=main-ana-20261107"></script>
+  <script defer src="ana-recent.js?v=auto-20261107"></script>
+  <script defer src="ana-persisted.js?v=auto-20261107"></script>
+  <script defer src="automation-status.js?v=auto-20261107"></script>
+  <script defer src="ana-main-data.js?v=main-ana-20261107"></script>
+  <script defer src="app.js?v=auto-20261107"></script>
 </head>
 <body>
   <header class="topbar">
@@ -48,13 +51,14 @@
     <div class="hero-source"><b>Dados reais, estações georreferenciadas.</b><small>Selecione INMET ou ANA nos filtros abaixo. ANA Brasil: chuva, cota e vazão no mesmo mapa e gráficos. Fonte pública histórica pode ter defasagem; última medição e cobertura são mostradas. Não misturamos estações nem fontes.</small></div>
   </section>
 
+  <p id="automationStatus" class="small" role="status" style="margin:12px 24px">Verificando o estado das atualizações automáticas…</p>
   <main class="layout">
     <aside class="panel">
       <div class="section-tag">01 / Filtros de análise</div><h2>Seu recorte climático</h2>
-      <div class="field"><label for="sourceSelect">Fonte de dados</label><select id="sourceSelect"><option value="inmet">INMET · temperatura e clima</option><option value="ana">ANA Brasil · chuva, cota e vazão</option></select></div>
+      <div class="field"><label for="sourceSelect">Fonte de dados</label><select id="sourceSelect"><option value="inmet">INMET · temperatura e clima</option><option value="ana">ANA Brasil · histórico: chuva, cota e vazão</option><option value="ana_recent">ANA Brasil · telemetria recente: nível e vazão</option></select></div>
       <div id="anaMainControls" hidden>
         <div class="field"><label for="anaType">Variável ANA</label><select id="anaType"><option value="chuva">Chuva (mm)</option><option value="cotas">Cota (cm)</option><option value="vazao">Vazão (m³/s)</option></select></div>
-        <div class="field"><label for="anaConsistency">Consistência ANA</label><select id="anaConsistency"><option value="1">Bruto / preliminar (nível 1)</option><option value="2">Consistido (nível 2)</option></select></div>
+        <div class="field" id="anaConsistencyField"><label for="anaConsistency">Consistência ANA</label><select id="anaConsistency"><option value="1">Bruto / preliminar (nível 1)</option><option value="2">Consistido (nível 2)</option></select></div>
         <p class="small">Inventário nacional por UF. Dados históricos sob demanda, com defasagem possível. Gráfico mensal usa somente meses completos; totais parciais aparecem identificados na tabela. Relação entre variáveis fica disponível no INMET.</p>
       </div>
 
@@ -75,7 +79,7 @@
         <div class="small" id="stationMeta">—</div>
       </div>
 
-      <div class="grid2">
+      <div class="grid2" id="yearsControls">
         <div class="field">
           <label>Ano inicial</label>
           <select id="yearStart"></select>

@@ -1,0 +1,64 @@
+name: Atualizar ANA nacional incremental
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/atualizar-ana-nacional.yml'
+  schedule:
+    - cron: '17 */3 * * *'
+  workflow_dispatch:
+permissions:
+  contents: write
+  pages: write
+concurrency:
+  group: climogramas-data-sync
+  cancel-in-progress: false
+jobs:
+  coletar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Testar parser e preservação de dados sem rede
+        run: python -m unittest discover -s tests/ana -v
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Testar telemetria recente
+        run: |
+          python -m unittest discover -s tests/recent -v
+          node tests/recent/test_ana_recent.cjs
+      - name: Coleta limitada e retomável (sem senha)
+        id: conventional
+        continue-on-error: true
+        run: |
+          BOOTSTRAPPED=$(python -c "import json,pathlib;p=pathlib.Path('assets/ana/state.json');print('yes' if p.exists() and json.loads(p.read_text()).get('bootstrap_attempted') else 'no')")
+          if [ "$BOOTSTRAPPED" = "no" ]; then
+            python tools/sync_ana.py --catalog-budget 27 --series-budget 20 --max-seconds 1800 --delay-seconds 2
+          else
+            python tools/sync_ana.py --catalog-budget 1 --series-budget 20 --max-seconds 900 --delay-seconds 2
+          fi
+      - name: Atualizar camada telemétrica recente separada
+        id: recent
+        continue-on-error: true
+        run: python scripts/sync_ana_recent.py --budget 20 --max-seconds 300
+      - name: Publicar somente snapshots ANA
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add assets/ana/
+          if ! git diff --cached --quiet; then
+            git commit -m 'data(ana): atualizar cache nacional incremental e estado'
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
+      - name: Solicitar e verificar build do Pages existente
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash scripts/request_pages_build.sh
+      - name: Sinalizar falhas após preservar resultados parciais
+        if: steps.conventional.outcome != 'success' || steps.recent.outcome != 'success'
+        run: exit 1

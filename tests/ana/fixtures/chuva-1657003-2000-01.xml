@@ -1,0 +1,253 @@
+<?xml version="1.0" encoding="utf-8"?>
+<DataTable xmlns="http://MRCS/">
+  <xs:schema id="NewDataSet" xmlns="" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xs:element name="NewDataSet" msdata:IsDataSet="true" msdata:MainDataTable="SerieHistorica" msdata:UseCurrentLocale="true">
+      <xs:complexType>
+        <xs:choice minOccurs="0" maxOccurs="unbounded">
+          <xs:element name="SerieHistorica">
+            <xs:complexType>
+              <xs:sequence>
+                <xs:element name="EstacaoCodigo" type="xs:int" minOccurs="0" />
+                <xs:element name="NivelConsistencia" type="xs:unsignedByte" minOccurs="0" />
+                <xs:element name="DataHora" type="xs:string" minOccurs="0" />
+                <xs:element name="TipoMedicaoChuvas" type="xs:string" minOccurs="0" />
+                <xs:element name="Maxima" type="xs:string" minOccurs="0" />
+                <xs:element name="Total" type="xs:string" minOccurs="0" />
+                <xs:element name="DiaMaxima" type="xs:string" minOccurs="0" />
+                <xs:element name="NumDiasDeChuva" type="xs:string" minOccurs="0" />
+                <xs:element name="MaximaStatus" type="xs:string" minOccurs="0" />
+                <xs:element name="TotalStatus" type="xs:string" minOccurs="0" />
+                <xs:element name="NumDiasDeChuvaStatus" type="xs:string" minOccurs="0" />
+                <xs:element name="TotalAnual" type="xs:string" minOccurs="0" />
+                <xs:element name="TotalAnualStatus" type="xs:string" minOccurs="0" />
+                <xs:element name="Chuva01" type="xs:string" minOccurs="0" />
+                <xs:element name="Chuva02" type="xs:string" minOccurs="0" />
+                <xs:element name="Chuva03" type="xs:string" minOccurs="0" />
+                <xs:element name="Chuva04" type="xs:string" minOccurs="0" />
+                <xs:element name="Chuva05" type="xs:string" minOccurs="0" />
+                <xs:element name="Chuva06" type="xs:string" minOccurs="0" />
+                <xs:element name="Chuva07" type="xs:string" minOccurs="0" />
+                <xs:element name="Chuva08" type="xs:string" minOccurs="0" />
+                <xs:element name="Chuva09" type="xs:string" minOccurs="0" />
+                <xs:element name="Chuva10" type="xs:string" minOccurs="0" />
+                <xs:element name="Chuva11" type="xs:string" minOccurs="0" />
+                <xs:element name="Chuva12" type="xs:string" minOccurs="0" />
+                <xs:element name="Chuva13" type="xs:string" minOccurs="0" />
+                <xs:element name="Chuva14" type="xs:string" minOccurs="0" />
+                <xs:element name="Chuva15" type="xs:string" minOccurs="0" />
+                <xs:element name="Chuva16" type="xs:string" minOccurs="0" />
+                <xs:element name="Chuva17" type="xs:string" minOccurs="0" />
+                <xs:element name="Chuva18" type="xs:string" minOccurs="0" />
+                <xs:element name="Chuva19" type="xs:string" minOccurs="0" />
+                <xs:element name="Chuva20" type="xs:string" minOccurs="0" />
+                <xs:element name="Chuva21" type="xs:string" minOccurs="0" />
+                <xs:element name="Chuva22" type="xs:string" minOccurs="0" />
+                <xs:element name="Chuva23" type="xs:string" minOccurs="0" />
+                <xs:element name="Chuva24" type="xs:string" minOccurs="0" />
+                <xs:element name="Chuva25" type="xs:string" minOccurs="0" />
+                <xs:element name="Chuva26" type="xs:string" minOccurs="0" />
+                <xs:element name="Chuva27" type="xs:string" minOccurs="0" />
+                <xs:element name="Chuva28" type="xs:string" minOccurs="0" />
+                <xs:element name="Chuva29" type="xs:string" minOccurs="0" />
+                <xs:element name="Chuva30" type="xs:string" minOccurs="0" />
+                <xs:element name="Chuva31" type="xs:string" minOccurs="0" />
+                <xs:element name="Chuva01Status" type="xs:string" minOccurs="0" />
+                <xs:element name="Chuva02Status" type="xs:string" minOccurs="0" />
+                <xs:element name="Chuva03Status" type="xs:string" minOccurs="0" />
+                <xs:element name="Chuva04Status" type="xs:string" minOccurs="0" />
+                <xs:element name="Chuva05Status" type="xs:string" minOccurs="0" />
+                <xs:element name="Chuva06Status" type="xs:string" minOccurs="0" />
+                <xs:element name="Chuva07Status" type="xs:string" minOccurs="0" />
+                <xs:element name="Chuva08Status" type="xs:string" minOccurs="0" />
+                <xs:element name="Chuva09Status" type="xs:string" minOccurs="0" />
+                <xs:element name="Chuva10Status" type="xs:string" minOccurs="0" />
+                <xs:element name="Chuva11Status" type="xs:string" minOccurs="0" />
+                <xs:element name="Chuva12Status" type="xs:string" minOccurs="0" />
+                <xs:element name="Chuva13Status" type="xs:string" minOccurs="0" />
+                <xs:element name="Chuva14Status" type="xs:string" minOccurs="0" />
+                <xs:element name="Chuva15Status" type="xs:string" minOccurs="0" />
+                <xs:element name="Chuva16Status" type="xs:string" minOccurs="0" />
+                <xs:element name="Chuva17Status" type="xs:string" minOccurs="0" />
+                <xs:element name="Chuva18Status" type="xs:string" minOccurs="0" />
+                <xs:element name="Chuva19Status" type="xs:string" minOccurs="0" />
+                <xs:element name="Chuva20Status" type="xs:string" minOccurs="0" />
+                <xs:element name="Chuva21Status" type="xs:string" minOccurs="0" />
+                <xs:element name="Chuva22Status" type="xs:string" minOccurs="0" />
+                <xs:element name="Chuva23Status" type="xs:string" minOccurs="0" />
+                <xs:element name="Chuva24Status" type="xs:string" minOccurs="0" />
+                <xs:element name="Chuva25Status" type="xs:string" minOccurs="0" />
+                <xs:element name="Chuva26Status" type="xs:string" minOccurs="0" />
+                <xs:element name="Chuva27Status" type="xs:string" minOccurs="0" />
+                <xs:element name="Chuva28Status" type="xs:string" minOccurs="0" />
+                <xs:element name="Chuva29Status" type="xs:string" minOccurs="0" />
+                <xs:element name="Chuva30Status" type="xs:string" minOccurs="0" />
+                <xs:element name="Chuva31Status" type="xs:string" minOccurs="0" />
+                <xs:element name="DataIns" type="xs:string" minOccurs="0" />
+              </xs:sequence>
+            </xs:complexType>
+          </xs:element>
+        </xs:choice>
+      </xs:complexType>
+    </xs:element>
+  </xs:schema>
+  <diffgr:diffgram xmlns:msdata="urn:schemas-microsoft-com:xml-msdata" xmlns:diffgr="urn:schemas-microsoft-com:xml-diffgram-v1">
+    <DocumentElement xmlns="">
+      <SerieHistorica diffgr:id="SerieHistorica1" msdata:rowOrder="0">
+        <EstacaoCodigo>1657003</EstacaoCodigo>
+        <NivelConsistencia>2</NivelConsistencia>
+        <DataHora>2000-01-01 00:00:00</DataHora>
+        <TipoMedicaoChuvas>1</TipoMedicaoChuvas>
+        <Maxima>97.4</Maxima>
+        <Total>176.7</Total>
+        <DiaMaxima>29</DiaMaxima>
+        <NumDiasDeChuva>11</NumDiasDeChuva>
+        <MaximaStatus>1</MaximaStatus>
+        <TotalStatus>1</TotalStatus>
+        <NumDiasDeChuvaStatus>1</NumDiasDeChuvaStatus>
+        <TotalAnual />
+        <TotalAnualStatus>0</TotalAnualStatus>
+        <Chuva01>0</Chuva01>
+        <Chuva02>3.4</Chuva02>
+        <Chuva03>0</Chuva03>
+        <Chuva04>0</Chuva04>
+        <Chuva05>0</Chuva05>
+        <Chuva06>4.6</Chuva06>
+        <Chuva07>17.3</Chuva07>
+        <Chuva08>0</Chuva08>
+        <Chuva09>0</Chuva09>
+        <Chuva10>21.4</Chuva10>
+        <Chuva11>12</Chuva11>
+        <Chuva12>0</Chuva12>
+        <Chuva13>0</Chuva13>
+        <Chuva14>0</Chuva14>
+        <Chuva15>0</Chuva15>
+        <Chuva16>8</Chuva16>
+        <Chuva17>5.8</Chuva17>
+        <Chuva18>0</Chuva18>
+        <Chuva19>5</Chuva19>
+        <Chuva20>0</Chuva20>
+        <Chuva21>0</Chuva21>
+        <Chuva22>0</Chuva22>
+        <Chuva23>0</Chuva23>
+        <Chuva24>0</Chuva24>
+        <Chuva25>0</Chuva25>
+        <Chuva26>1</Chuva26>
+        <Chuva27>0.8</Chuva27>
+        <Chuva28>0</Chuva28>
+        <Chuva29>97.4</Chuva29>
+        <Chuva30>0</Chuva30>
+        <Chuva31>0</Chuva31>
+        <Chuva01Status>1</Chuva01Status>
+        <Chuva02Status>1</Chuva02Status>
+        <Chuva03Status>1</Chuva03Status>
+        <Chuva04Status>1</Chuva04Status>
+        <Chuva05Status>1</Chuva05Status>
+        <Chuva06Status>1</Chuva06Status>
+        <Chuva07Status>1</Chuva07Status>
+        <Chuva08Status>1</Chuva08Status>
+        <Chuva09Status>1</Chuva09Status>
+        <Chuva10Status>1</Chuva10Status>
+        <Chuva11Status>1</Chuva11Status>
+        <Chuva12Status>1</Chuva12Status>
+        <Chuva13Status>1</Chuva13Status>
+        <Chuva14Status>1</Chuva14Status>
+        <Chuva15Status>1</Chuva15Status>
+        <Chuva16Status>1</Chuva16Status>
+        <Chuva17Status>1</Chuva17Status>
+        <Chuva18Status>1</Chuva18Status>
+        <Chuva19Status>1</Chuva19Status>
+        <Chuva20Status>1</Chuva20Status>
+        <Chuva21Status>1</Chuva21Status>
+        <Chuva22Status>1</Chuva22Status>
+        <Chuva23Status>1</Chuva23Status>
+        <Chuva24Status>1</Chuva24Status>
+        <Chuva25Status>1</Chuva25Status>
+        <Chuva26Status>1</Chuva26Status>
+        <Chuva27Status>1</Chuva27Status>
+        <Chuva28Status>1</Chuva28Status>
+        <Chuva29Status>1</Chuva29Status>
+        <Chuva30Status>1</Chuva30Status>
+        <Chuva31Status>1</Chuva31Status>
+        <DataIns />
+      </SerieHistorica>
+      <SerieHistorica diffgr:id="SerieHistorica2" msdata:rowOrder="1">
+        <EstacaoCodigo>1657003</EstacaoCodigo>
+        <NivelConsistencia>1</NivelConsistencia>
+        <DataHora>2000-01-01 00:00:00</DataHora>
+        <TipoMedicaoChuvas>1</TipoMedicaoChuvas>
+        <Maxima>97.4</Maxima>
+        <Total>176.7</Total>
+        <DiaMaxima>29</DiaMaxima>
+        <NumDiasDeChuva>11</NumDiasDeChuva>
+        <MaximaStatus>1</MaximaStatus>
+        <TotalStatus>1</TotalStatus>
+        <NumDiasDeChuvaStatus>1</NumDiasDeChuvaStatus>
+        <TotalAnual />
+        <TotalAnualStatus>0</TotalAnualStatus>
+        <Chuva01>0</Chuva01>
+        <Chuva02>3.4</Chuva02>
+        <Chuva03>0</Chuva03>
+        <Chuva04>0</Chuva04>
+        <Chuva05>0</Chuva05>
+        <Chuva06>4.6</Chuva06>
+        <Chuva07>17.3</Chuva07>
+        <Chuva08>0</Chuva08>
+        <Chuva09>0</Chuva09>
+        <Chuva10>21.4</Chuva10>
+        <Chuva11>12</Chuva11>
+        <Chuva12>0</Chuva12>
+        <Chuva13>0</Chuva13>
+        <Chuva14>0</Chuva14>
+        <Chuva15>0</Chuva15>
+        <Chuva16>8</Chuva16>
+        <Chuva17>5.8</Chuva17>
+        <Chuva18>0</Chuva18>
+        <Chuva19>5</Chuva19>
+        <Chuva20>0</Chuva20>
+        <Chuva21>0</Chuva21>
+        <Chuva22>0</Chuva22>
+        <Chuva23>0</Chuva23>
+        <Chuva24>0</Chuva24>
+        <Chuva25>0</Chuva25>
+        <Chuva26>1</Chuva26>
+        <Chuva27>0.8</Chuva27>
+        <Chuva28>0</Chuva28>
+        <Chuva29>97.4</Chuva29>
+        <Chuva30>0</Chuva30>
+        <Chuva31>0</Chuva31>
+        <Chuva01Status>1</Chuva01Status>
+        <Chuva02Status>1</Chuva02Status>
+        <Chuva03Status>1</Chuva03Status>
+        <Chuva04Status>1</Chuva04Status>
+        <Chuva05Status>1</Chuva05Status>
+        <Chuva06Status>1</Chuva06Status>
+        <Chuva07Status>1</Chuva07Status>
+        <Chuva08Status>1</Chuva08Status>
+        <Chuva09Status>1</Chuva09Status>
+        <Chuva10Status>1</Chuva10Status>
+        <Chuva11Status>1</Chuva11Status>
+        <Chuva12Status>1</Chuva12Status>
+        <Chuva13Status>1</Chuva13Status>
+        <Chuva14Status>1</Chuva14Status>
+        <Chuva15Status>1</Chuva15Status>
+        <Chuva16Status>1</Chuva16Status>
+        <Chuva17Status>1</Chuva17Status>
+        <Chuva18Status>1</Chuva18Status>
+        <Chuva19Status>1</Chuva19Status>
+        <Chuva20Status>1</Chuva20Status>
+        <Chuva21Status>1</Chuva21Status>
+        <Chuva22Status>1</Chuva22Status>
+        <Chuva23Status>1</Chuva23Status>
+        <Chuva24Status>1</Chuva24Status>
+        <Chuva25Status>1</Chuva25Status>
+        <Chuva26Status>1</Chuva26Status>
+        <Chuva27Status>1</Chuva27Status>
+        <Chuva28Status>1</Chuva28Status>
+        <Chuva29Status>1</Chuva29Status>
+        <Chuva30Status>1</Chuva30Status>
+        <Chuva31Status>1</Chuva31Status>
+        <DataIns />
+      </SerieHistorica>
+    </DocumentElement>
+  </diffgr:diffgram>
+</DataTable>

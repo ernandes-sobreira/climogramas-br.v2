@@ -1,0 +1,66 @@
+<?xml version='1.0' encoding='utf-8'?>
+<Estacoes xmlns:ns0="urn:schemas-microsoft-com:xml-diffgram-v1" xmlns:ns1="urn:schemas-microsoft-com:xml-msdata"><Table ns0:id="Table1" ns1:rowOrder="0">
+        <NomeEstacao>CURUÇÁ</NomeEstacao>
+        <CodEstacao>00047008</CodEstacao>
+        <Bacia>3</Bacia>
+        <SubBacia>32</SubBacia>
+        <Operadora>00403 - SEMAS-PA - Secretaria do Meio Ambiente e Sustentabilidad...</Operadora>
+        <Responsavel>00403 - SEMAS-PA - Secretaria do Meio Ambiente e Sustentabilidad...</Responsavel>
+        <Municipio-UF>CURUÇA-PA</Municipio-UF>
+        <Latitude>-0.72310</Latitude>
+        <Longitude>-47.85470</Longitude>
+        <Altitude>22.00</Altitude>
+        <CodRio>0</CodRio>
+        <NomeRio />
+        <Origem>RHN</Origem>
+        <StatusEstacao>Ativo</StatusEstacao>
+      </Table>
+      <Table ns0:id="Table467" ns1:rowOrder="466">
+        <NomeEstacao>TABATINGA</NomeEstacao>
+        <CodEstacao>10100000</CodEstacao>
+        <Bacia>1</Bacia>
+        <SubBacia>10</SubBacia>
+        <Operadora>00082 - SGB-CPRM - Serviço Geológico do Brasil</Operadora>
+        <Responsavel>00001 - ANA - Agência Nacional de Águas </Responsavel>
+        <Municipio-UF>TABATINGA-AM</Municipio-UF>
+        <Latitude>-4.23470</Latitude>
+        <Longitude>-69.94470</Longitude>
+        <Altitude>78.00</Altitude>
+        <CodRio>10001000</CodRio>
+        <NomeRio>RIO SOLIMÕES-AMAZONAS</NomeRio>
+        <Origem>RHN</Origem>
+        <StatusEstacao>Ativo</StatusEstacao>
+      </Table>
+      <Table ns0:id="Table468" ns1:rowOrder="467">
+        <NomeEstacao>TABATINGA</NomeEstacao>
+        <CodEstacao>10100000</CodEstacao>
+        <Bacia>1</Bacia>
+        <SubBacia>10</SubBacia>
+        <Operadora>00082 - SGB-CPRM - Serviço Geológico do Brasil</Operadora>
+        <Responsavel>00001 - ANA - Agência Nacional de Águas </Responsavel>
+        <Municipio-UF>TABATINGA-AM</Municipio-UF>
+        <Latitude>-4.23470</Latitude>
+        <Longitude>-69.94470</Longitude>
+        <Altitude>78.00</Altitude>
+        <CodRio>10001000</CodRio>
+        <NomeRio>RIO SOLIMÕES-AMAZONAS</NomeRio>
+        <Origem>Açudes Semiárido</Origem>
+        <StatusEstacao>Ativo</StatusEstacao>
+      </Table>
+      <Table ns0:id="Table465" ns1:rowOrder="464">
+        <NomeEstacao>TAMISHIYACU</NomeEstacao>
+        <CodEstacao>10075000</CodEstacao>
+        <Bacia>1</Bacia>
+        <SubBacia>10</SubBacia>
+        <Operadora>00906 - SENAMHI-PERU - SENAMHI-PERU</Operadora>
+        <Responsavel>00906 - SENAMHI-PERU - SENAMHI-PERU</Responsavel>
+        <Municipio-UF>PERU-PU</Municipio-UF>
+        <Latitude>-4.00360</Latitude>
+        <Longitude>-73.16110</Longitude>
+        <Altitude>105.00</Altitude>
+        <CodRio>10001000</CodRio>
+        <NomeRio>RIO SOLIMÕES-AMAZONAS</NomeRio>
+        <Origem>RHN</Origem>
+        <StatusEstacao>Ativo</StatusEstacao>
+      </Table>
+      </Estacoes>
