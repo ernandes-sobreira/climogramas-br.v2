@@ -3,19 +3,20 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Climogramas BR · HidroWeb ANA (beta)</title>
+  <title>Climogramas BR · HidroWeb ANA Brasil</title>
   <link rel="stylesheet" href="../style.css">
-  <link rel="stylesheet" href="ana.css">
+  <link rel="stylesheet" href="ana.css?v=ana-br-20261107">
   <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-  <script defer src="ana-stats.js"></script>
-  <script defer src="ana-api.js"></script>
-  <script defer src="ana.js"></script>
+  <script defer src="ana-stats.js?v=ana-br-20261107"></script>
+  <script defer src="ana-api.js?v=ana-br-20261107"></script>
+  <script defer src="ana-public.js?v=ana-br-20261107"></script>
+  <script defer src="ana.js?v=ana-br-20261107"></script>
 </head>
 <body>
 <header class="topbar">
   <div class="brand">
-    <div class="brandTitle">climogramas-br <span class="badge">ANA beta</span></div>
-    <div class="brandSubtitle">Clima + hidrologia · dados oficiais ANA/HidroWeb · módulo isolado do sistema INMET atual.</div>
+    <div class="brandTitle">climogramas-br <span class="badge">ANA Brasil</span></div>
+    <div class="brandSubtitle">Brasil · chuva, cota e vazão · catálogo oficial por UF · séries históricas separadas do INMET.</div>
   </div>
   <div class="topActions">
     <a class="backLink" href="../">← Voltar ao Climogramas BR</a>
@@ -25,8 +26,9 @@
 <main class="anaLayout">
   <aside class="panel anaPanel">
     <h2>HidroWeb ANA</h2>
+    <div class="field"><label>Fonte de consulta</label><select id="dataSource"><option value="public">ANA pública · séries históricas</option><option value="proxy" disabled>API autenticada · ainda indisponível</option></select><div class="small">Brasil: inventário por UF e séries históricas, sem senha. Serviço legado oficial de base secundária: pode haver defasagem ou indisponibilidade. Não substitui o INMET.</div></div>
 
-    <div class="field">
+    <div class="field" id="proxySettings" hidden>
       <label>Endpoint seguro do proxy</label>
       <input id="proxyUrl" type="url" placeholder="https://seu-proxy.exemplo.workers.dev">
       <div class="small">As credenciais ANA nunca ficam no GitHub Pages.</div>
@@ -52,8 +54,9 @@
       </div>
     </div>
 
+    <div class="field"><label>Código ANA da estação (consulta pública)</label><input id="publicStation" inputmode="numeric" placeholder="Informe o código ANA"><div class="small">Consulta por código para estações de qualquer UF. A disponibilidade varia conforme estação, variável, período e consistência. Carregue o catálogo oficial por UF e variável ou informe o código. O cadastro de uma estação não garante dados no período consultado.</div></div>
     <div class="field">
-      <label>Estação</label>
+      <label>Estação do catálogo ANA</label>
       <select id="stationSelect"><option value="">Carregue uma UF</option></select>
       <div id="stationMeta" class="small">—</div>
     </div>
@@ -68,11 +71,9 @@
         </select>
       </div>
       <div class="field">
-        <label>Consistência</label>
-        <select id="consistency">
-          <option value="2">Consistido</option>
-          <option value="1">Bruto</option>
-        </select>
+        <label>Consistência da fonte</label>
+        <select id="consistency"><option value="2">Consistido (nível 2)</option><option value="1">Bruto (nível 1)</option></select>
+        <div class="small" id="consistencyNote">A consulta pública filtra explicitamente o nível retornado, sem misturar bruto e consistido.</div>
       </div>
     </div>
 
@@ -87,13 +88,12 @@
       <button id="btnCsv" type="button">Baixar CSV</button>
     </div>
 
-    <div class="msg" id="msgBox">Configure o proxy seguro para começar.</div>
+    <div class="msg" id="msgBox">Consulta pública disponível. Escolha estação, variável, período e consistência.</div>
 
     <div class="miniCard">
-      <div class="miniHeader"><div class="miniTitle">Por que um proxy?</div></div>
+      <div class="miniHeader"><div class="miniTitle">Histórico, não tempo real</div></div>
       <div class="small">
-        A API nova da ANA usa identificador/senha para gerar token. Em GitHub Pages, qualquer segredo colocado no JavaScript fica público.
-        O proxy guarda as credenciais no servidor e entrega ao navegador somente os dados.
+        O serviço público legado é uma base secundária e pode ter defasagem. A data mais recente aparece após a consulta. Cobertura nacional significa acesso ao inventário das UFs, não disponibilidade de todas as variáveis em todas as estações. Temperatura e climatologia INMET continuam no módulo principal.
       </div>
     </div>
   </aside>

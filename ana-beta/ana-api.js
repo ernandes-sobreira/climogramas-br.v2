@@ -28,11 +28,20 @@
       const body=await getJson(this.base+"/inventory?uf="+encodeURIComponent(uf));
       return items(body);
     }
-    async series({type,station,start,end,consistency="2"}){
+    async series({type,station,start,end}){
       this.ensure();
-      const qs=new URLSearchParams({type,station,start,end,consistency});
-      const body=await getJson(this.base+"/series?"+qs.toString());
-      return items(body);
+      const parse=value=>{if(!/^\d{4}-\d{2}-\d{2}$/.test(value))throw new Error("Data inválida.");const d=new Date(value+"T00:00:00Z");if(!Number.isFinite(+d)||d.toISOString().slice(0,10)!==value)throw new Error("Data inválida.");return d;};
+      let cursor=parse(start);const final=parse(end);
+      if(cursor>final || final-cursor>60*366*86400000)throw new Error("Período inválido ou superior a 60 anos.");
+      const result=[];
+      // Publish nothing on partial failure. Each official call is at most 366 days.
+      while(cursor<=final){
+        const last=new Date(Math.min(+cursor+365*86400000,+final));
+        const qs=new URLSearchParams({type,station,start:cursor.toISOString().slice(0,10),end:last.toISOString().slice(0,10)});
+        const body=await getJson(this.base+"/series?"+qs.toString());
+        result.push(...items(body));cursor=new Date(+last+86400000);
+      }
+      return result;
     }
   }
 

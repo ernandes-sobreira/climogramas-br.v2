@@ -1,69 +1,33 @@
-# ANA / HidroWeb beta — Climogramas BR
+# ANA Brasil / Climogramas BR
 
-Este módulo foi criado isoladamente para não alterar o funcionamento atual do `index.html` (INMET).
+Módulo separado do INMET, para consultar o inventário oficial brasileiro por UF e séries de chuva, cota e vazão por estação. O cadastro nacional não garante dados em todos os períodos ou variáveis.
 
-## Arquitetura
+## Fonte pública ativa
 
-```
-GitHub Pages (ana-beta/)
-        |
-        v
-proxy serverless seguro
-        |
-        v
-API HidroWebService / ANA
-```
+- `https://telemetriaws1.ana.gov.br/ServiceANA.asmx/HidroInventario`
+- `https://telemetriaws1.ana.gov.br/ServiceANA.asmx/HidroSerieHistorica`
 
-O navegador **não** recebe CPF/CNPJ, senha nem token da ANA.
+GET oficial, XML e CORS, sem credenciais. É serviço legado/base secundária: pode apresentar defasagem, falhas ou descontinuidade. Não promete tempo real nem atualização automática persistente. As consultas são sob demanda. Temperatura e processamento INMET permanecem intactos.
 
-## O que já existe
+Inventário: 27 UFs, carregamento por UF/tipo, cache em memória de 30 minutos, inclui estações inativas para pesquisa histórica. Código livre permite consulta sem depender do inventário. Variável/UF alterada limpa seleção antiga. Limite local de resposta de inventário:30MB.
 
-- inventário de estações por UF;
-- busca por código, nome, município, rio e bacia;
-- séries de chuva, cota e vazão;
-- paginação automática da API em blocos de até 366 dias;
-- estatística descritiva anual;
-- ano mais seco / mais chuvoso para precipitação;
-- mínimos, máximos, média, desvio-padrão e CV;
-- Mann-Kendall;
-- inclinação de Sen (também por década);
-- regressão linear descritiva e R²;
-- exportação CSV.
+Séries: janelas anuais, máximo60anos por consulta. Tipos1=cota,2=chuva,3=vazão; unidadescm,mm,m³/s. O retorno pode incluir dois níveis de consistência mesmo quando solicitado apenas um. O parser filtra o nível escolhido antes de deduplicar e nunca recorre automaticamente ao bruto.
 
-## Proxy
+## Qualidade
 
-O exemplo em `worker/ana-proxy.js` segue o manual oficial da ANA:
+- Somente status diário1(real) usado em estatística e cobertura.
+- Valores vazios/sentinelas não viram zero; zero legítimo é mantido.
+- Dias inválidos e valores conflitantes são excluídos.
+- Ranking/tendências apenas para anos anteriores com365/366dias válidos; anos parciais permanecem visíveis, identificados.
+- Última observação real, cobertura e exclusões apresentados na interface.
+- Falha de consulta preserva gráfico/tabela anteriores; não substitui dados por vazio.
 
-- autenticação em `/OAUth/v1`;
-- headers `Identificador` e `Senha`;
-- token enviado como `Authorization: Bearer ...`;
-- renovação local antes de 60 minutos;
-- inventário em `HidroInventarioEstacoes/v1`;
-- séries `HidroSerieChuva/v1`, `HidroSerieCotas/v1` e `HidroSerieVazao/v1`;
-- consultas históricas divididas em janelas de no máximo 366 dias.
+## Evidências de validação em07/11/2026
 
-Configure os secrets no ambiente do proxy:
+XMLs oficiais: chuva1657003, cota/vazão66070004 emjan2000;31dias porvariável. Chuva176.7mm; cota284cm e vazão468.591m³/s no1ºdia. Outro exemplo brasileiro: chuva771001 noAcre,31dias e139.2mm. InventáriosAcre152(tipos1/2),SãoPaulo3458pluviométricas,MinasGerais2464pluviométricas, incluindo inativas. Esses testes não afirmam disponibilidade nacional de séries atuais.
 
-- `ANA_IDENTIFICADOR`
-- `ANA_SENHA`
+2026Cáceres demonstra limitação: chuva/vazão apenasjan–jun brutos na consulta testada, cota semregistros. Dados consistidos ausentes não equivalem a zero nem ausência de bruto.
 
-Nunca grave esses valores no repositório.
+## API autenticada
 
-## Contrato usado pelo front-end
-
-- `GET /health`
-- `GET /inventory?uf=MT`
-- `GET /series?type=chuva&station=XXXXX&start=YYYY-MM-DD&end=YYYY-MM-DD`
-
-O campo de consistência aparece na interface beta para evolução posterior. O endpoint novo de séries convencionais utilizado aqui segue a parametrização atual documentada pela ANA e não envia um parâmetro separado de consistência.
-
-## Validação antes de integrar ao site principal
-
-1. publicar o proxy;
-2. configurar os dois secrets;
-3. abrir `ana-beta/`;
-4. informar a URL do proxy;
-5. testar uma estação conhecida em período curto;
-6. comparar valores com o HidroWeb;
-7. só depois adicionar a entrada ANA ao menu principal.
-
+Opção desativada na interface. Código antigo/proxy experimental não representa serviço funcional em produção. Nenhum segredo deve ser colocado no GitHubPages. Testes autenticados falharam sem token; integração pública não depende deles.
