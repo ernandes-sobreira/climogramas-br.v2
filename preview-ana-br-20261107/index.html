@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Climogramas BR · HidroWeb ANA Brasil</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="ana.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script defer src="ana-stats.js"></script>
+  <script defer src="ana-api.js"></script>
+  <script defer src="ana-public.js"></script>
+  <script defer src="ana.js"></script>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <div class="brandTitle">climogramas-br <span class="badge">ANA Brasil</span></div>
+    <div class="brandSubtitle">Brasil · chuva, cota e vazão · catálogo oficial por UF · séries históricas separadas do INMET.</div>
+  </div>
+  <div class="topActions">
+    <a class="backLink" href="../">← Voltar ao Climogramas BR</a>
+  </div>
+</header>
+
+<main class="anaLayout">
+  <aside class="panel anaPanel">
+    <h2>HidroWeb ANA</h2>
+    <div class="field"><label>Fonte de consulta</label><select id="dataSource"><option value="public">ANA pública · séries históricas</option><option value="proxy" disabled>API autenticada · ainda indisponível</option></select><div class="small">Brasil: inventário por UF e séries históricas, sem senha. Serviço legado oficial de base secundária: pode haver defasagem ou indisponibilidade. Não substitui o INMET.</div></div>
+
+    <div class="field" id="proxySettings" hidden>
+      <label>Endpoint seguro do proxy</label>
+      <input id="proxyUrl" type="url" placeholder="https://seu-proxy.exemplo.workers.dev">
+      <div class="small">As credenciais ANA nunca ficam no GitHub Pages.</div>
+    </div>
+
+    <div class="grid2">
+      <div class="field">
+        <label>UF</label>
+        <select id="ufSelect">
+          <option value="">Selecione</option>
+          <option>AC</option><option>AL</option><option>AP</option><option>AM</option>
+          <option>BA</option><option>CE</option><option>DF</option><option>ES</option>
+          <option>GO</option><option>MA</option><option>MT</option><option>MS</option>
+          <option>MG</option><option>PA</option><option>PB</option><option>PR</option>
+          <option>PE</option><option>PI</option><option>RJ</option><option>RN</option>
+          <option>RS</option><option>RO</option><option>RR</option><option>SC</option>
+          <option>SP</option><option>SE</option><option>TO</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Buscar</label>
+        <input id="stationSearch" type="search" placeholder="nome, código, município ou rio">
+      </div>
+    </div>
+
+    <div class="field"><label>Código ANA da estação (consulta pública)</label><input id="publicStation" inputmode="numeric" placeholder="Informe o código ANA"><div class="small">Consulta por código para estações de qualquer UF. A disponibilidade varia conforme estação, variável, período e consistência. Carregue o catálogo oficial por UF e variável ou informe o código. O cadastro de uma estação não garante dados no período consultado.</div></div>
+    <div class="field">
+      <label>Estação do catálogo ANA</label>
+      <select id="stationSelect"><option value="">Carregue uma UF</option></select>
+      <div id="stationMeta" class="small">—</div>
+    </div>
+
+    <div class="grid2">
+      <div class="field">
+        <label>Variável</label>
+        <select id="seriesType">
+          <option value="chuva">Chuva</option>
+          <option value="cotas">Cota</option>
+          <option value="vazao">Vazão</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Consistência da fonte</label>
+        <select id="consistency"><option value="2">Consistido (nível 2)</option><option value="1">Bruto (nível 1)</option></select>
+        <div class="small" id="consistencyNote">A consulta pública filtra explicitamente o nível retornado, sem misturar bruto e consistido.</div>
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div class="field"><label>Data inicial</label><input id="dateStart" type="date"></div>
+      <div class="field"><label>Data final</label><input id="dateEnd" type="date"></div>
+    </div>
+
+    <div class="actions">
+      <button id="btnStations" class="primary" type="button">Carregar estações</button>
+      <button id="btnRun" class="primary" type="button">Analisar série</button>
+      <button id="btnCsv" type="button">Baixar CSV</button>
+    </div>
+
+    <div class="msg" id="msgBox">Consulta pública disponível. Escolha estação, variável, período e consistência.</div>
+
+    <div class="miniCard">
+      <div class="miniHeader"><div class="miniTitle">Histórico, não tempo real</div></div>
+      <div class="small">
+        O serviço público legado é uma base secundária e pode ter defasagem. A data mais recente aparece após a consulta. Cobertura nacional significa acesso ao inventário das UFs, não disponibilidade de todas as variáveis em todas as estações. Temperatura e climatologia INMET continuam no módulo principal.
+      </div>
+    </div>
+  </aside>
+
+  <section class="content anaContent">
+    <div class="card">
+      <div class="cardHeader">
+        <div>
+          <div class="cardTitle" id="chartTitle">Série hidrológica</div>
+          <div class="cardMeta" id="chartMeta">Selecione uma estação.</div>
+        </div>
+      </div>
+      <div class="kpiGrid" id="kpis"></div>
+      <div class="chartWrap anaChart"><canvas id="mainChart"></canvas></div>
+    </div>
+
+    <div class="card">
+      <div class="cardHeader">
+        <div>
+          <div class="cardTitle">Tendência</div>
+          <div class="cardMeta">Mann-Kendall + inclinação de Sen + regressão linear descritiva.</div>
+        </div>
+      </div>
+      <div class="trendSummary" id="trendSummary">—</div>
+    </div>
+
+    <div class="card">
+      <div class="cardHeader">
+        <div class="cardTitle">Dados processados</div>
+        <div class="cardMeta" id="tableMeta">—</div>
+      </div>
+      <div class="tableWrap">
+        <table><thead id="tblHead"></thead><tbody id="tblBody"></tbody></table>
+      </div>
+    </div>
+  </section>
+</main>
+</body>
+</html>
