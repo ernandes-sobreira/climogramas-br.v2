@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Climogramas BR | Atlas climático de estações</title>
+
+  <link rel="stylesheet" href="../style.css" />
+  <link rel="stylesheet" href="../redesign.css" />
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- Chart.js -->
+  <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <!-- App -->
+  <script defer src="../ana-beta/ana-public.js?v=main-ana-20261107"></script>
+  <script defer src="ana-main-data.js?v=main-ana-20261107"></script>
+  <script defer src="app.js?v=main-ana-20261107"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brandTitle">Climogramas BR <span class="badge">Atlas climático</span></div>
+      <div class="brandSubtitle">
+        Atlas interativo do Brasil · INMET + ANA · Clima e hidrologia.
+        Idealizado por <b>Ernandes Sobreira; Wilkinson Kiwi Lopes Lázaro; Claumir Cesar Muniz</b>. Dados de origem INMET; cobertura conforme arquivo de cada estação.
+      </div>
+    </div>
+
+    <div class="topActions">
+      <a class="backLink" href="../ana-beta/?v=4e6332cf">ANA Brasil · chuva, cota e vazão</a>
+      <button id="btnHelp" class="helpBtn" type="button" title="Como usar">Como usar</button>
+
+      <div class="statusPills">
+        <div class="pill" id="pillStation">Estação: —</div>
+        <div class="pill" id="pillYears">Anos: —</div>
+        <div class="pill" id="pillData">Dados: —</div>
+      </div>
+    </div>
+  </header>
+  <section class="intro-hero" aria-label="Introdução ao observatório">
+    <div><span class="intro-kicker">OBSERVATÓRIO CLIMÁTICO · BRASIL</span>
+    <h1>O clima do Brasil,<br>em dados e perspectiva.</h1>
+    <p>Explore a temperatura, a precipitação e os padrões de milhares de registros por estação. Compare anos, descubra tendências e exporte visualizações científicas.</p></div>
+    <div class="hero-source"><b>Dados reais, estações georreferenciadas.</b><small>Selecione INMET ou ANA nos filtros abaixo. ANA Brasil: chuva, cota e vazão no mesmo mapa e gráficos. Fonte pública histórica pode ter defasagem; última medição e cobertura são mostradas. Não misturamos estações nem fontes.</small></div>
+  </section>
+
+  <main class="layout">
+    <aside class="panel">
+      <div class="section-tag">01 / Filtros de análise</div><h2>Seu recorte climático</h2>
+      <div class="field"><label for="sourceSelect">Fonte de dados</label><select id="sourceSelect"><option value="inmet">INMET · temperatura e clima</option><option value="ana">ANA Brasil · chuva, cota e vazão</option></select></div>
+      <div id="anaMainControls" hidden>
+        <div class="field"><label for="anaType">Variável ANA</label><select id="anaType"><option value="chuva">Chuva (mm)</option><option value="cotas">Cota (cm)</option><option value="vazao">Vazão (m³/s)</option></select></div>
+        <div class="field"><label for="anaConsistency">Consistência ANA</label><select id="anaConsistency"><option value="1">Bruto / preliminar (nível 1)</option><option value="2">Consistido (nível 2)</option></select></div>
+        <p class="small">Inventário nacional por UF. Dados históricos sob demanda, com defasagem possível. Gráfico mensal usa somente meses completos; totais parciais aparecem identificados na tabela. Relação entre variáveis fica disponível no INMET.</p>
+      </div>
+
+      <div class="grid2">
+        <div class="field">
+          <label>UF</label>
+          <select id="ufSelect"></select>
+        </div>
+        <div class="field">
+          <label>Buscar estação</label>
+          <input id="searchStation" type="text" placeholder="Digite nome/código e ENTER" />
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Estação</label>
+        <select id="stationSelect"></select>
+        <div class="small" id="stationMeta">—</div>
+      </div>
+
+      <div class="grid2">
+        <div class="field">
+          <label>Ano inicial</label>
+          <select id="yearStart"></select>
+        </div>
+        <div class="field">
+          <label>Ano final</label>
+          <select id="yearEnd"></select>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Nível de análise</label>
+        <div class="modeRow">
+          <button class="modeBtn active" data-mode="clim" type="button">Climograma (média mensal)</button>
+          <button class="modeBtn" data-mode="annual" type="button">Série anual</button>
+        </div>
+        <div class="modeRow">
+          <button class="modeBtn" data-mode="heatmap" type="button">Mensal por ano (heatmap)</button>
+          <button class="modeBtn" data-mode="rel" type="button">Relação entre variáveis</button>
+        </div>
+      </div>
+
+      <div class="grid2">
+        <div class="field">
+          <label>Variável 1 (principal)</label>
+          <select id="var1"></select>
+          <div class="small">Usada no gráfico principal (e no scatter, se for o caso).</div>
+        </div>
+        <div class="field">
+          <label>Variável 2 (relações)</label>
+          <select id="var2"></select>
+          <div class="small">Só aparece no modo “Relação”.</div>
+        </div>
+      </div>
+
+      <div class="field" id="trendBox">
+        <label>Modelo de tendência (modo “Relação”)</label>
+        <select id="trendModel">
+          <option value="linear">Linear</option>
+          <option value="log">Logarítmica</option>
+          <option value="exp">Exponencial</option>
+          <option value="poly2">Polinomial (grau 2)</option>
+          <option value="poly3">Polinomial (grau 3)</option>
+        </select>
+
+        <div class="checks" style="margin-top:8px;">
+          <label class="check"><input type="checkbox" id="showTrend" checked> Mostrar linha de tendência</label>
+          <label class="check"><input type="checkbox" id="showR2" checked> Mostrar R²</label>
+        </div>
+      </div>
+
+      <div class="checks">
+        <label class="check"><input type="checkbox" id="optMinMax" checked> Mostrar Min/Máx (quando fizer sentido)</label>
+        <label class="check"><input type="checkbox" id="optMean" checked> Mostrar Média</label>
+        <label class="check"><input type="checkbox" id="optPrecBars" checked> Precipitação em barras (quando disponível)</label>
+      </div>
+
+      <div class="actions">
+        <button id="btnRun" class="primary" type="button">Gerar</button>
+        <button id="btnPng" type="button">Baixar PNG</button>
+        <button id="btnCsv" type="button">Baixar CSV</button>
+        <button id="btnReset" class="ghost" type="button">Reset</button>
+      </div>
+
+      <div class="msg" id="msgBox">Pronto.</div>
+
+    </aside>
+
+    <section class="content">
+      <div class="card station-map-card">
+        <div class="cardHeader">
+          <div><div class="section-tag">02 / Exploração territorial</div><div class="cardTitle">Onde estão as estações?</div><div class="cardMeta">Mapa geográfico real · selecione uma estação para analisar sua série climática.</div></div>
+          <span class="map-source-pill">INMET · Brasil</span>
+        </div>
+        <div class="station-map-body"><div id="map"></div></div>
+      </div>
+      <div class="card">
+        <div class="cardHeader">
+          <div>
+            <div><div class="section-tag">03 / Visualização científica</div><div class="cardTitle" id="chartTitle">—</div></div>
+            <div class="cardMeta" id="chartMeta">—</div>
+          </div>
+          <div class="kpis" id="kpis"></div>
+        </div>
+
+        <div class="chartWrap">
+          <canvas id="mainChart"></canvas>
+        </div>
+
+        <!-- ✅ Legenda do heatmap AGORA FICA FORA DO GRÁFICO (embaixo) -->
+        <div class="heatLegend" id="heatLegend" style="display:none;">
+          <div class="heatLegendRow">
+            <span class="heatLegendLabel">Baixo</span>
+            <div class="heatLegendBar" id="heatLegendBar"></div>
+            <span class="heatLegendLabel">Alto</span>
+          </div>
+          <div class="heatLegendTicks">
+            <span id="heatMin">—</span>
+            <span id="heatMid">—</span>
+            <span id="heatMax">—</span>
+          </div>
+          <div class="heatLegendNote">Células cinza = sem dado.</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="cardHeader">
+          <div><div class="section-tag">04 / Dados auditáveis</div><div class="cardTitle">Tabela de resultados</div></div>
+          <div class="cardMeta" id="tableMeta">—</div>
+        </div>
+
+        <div class="tableWrap">
+          <table id="tbl">
+            <thead id="tblHead"></thead>
+            <tbody id="tblBody"></tbody>
+          </table>
+        </div>
+
+        <div class="footerNote">
+          Idealizado por Ernandes Sobreira · Dados INMET coletados em dez/2025.
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ✅ MODAL “Como usar” -->
+  <div class="modalOverlay" id="helpOverlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+      <div class="modalHeader">
+        <div>
+          <div class="modalTitle" id="helpTitle">Como usar esta plataforma</div>
+          <div class="modalSub">Leitura rápida, objetiva e feita para tomada de decisão.</div>
+        </div>
+        <button class="modalClose" id="btnHelpClose" type="button" aria-label="Fechar">✕</button>
+      </div>
+
+      <div class="modalBody">
+        <p>
+          Esta plataforma organiza séries climáticas do <b>INMET</b> por estação e período, ajudando em
+          <b>monitoramento</b>, <b>planejamento</b>, <b>gestão de risco</b> e <b>decisões técnicas</b>
+          (agricultura, recursos hídricos, saúde ambiental, infraestrutura e defesa civil).
+        </p>
+
+        <h4>Passo a passo (30 segundos)</h4>
+        <ol>
+          <li><b>Escolha a estação</b> (UF → estação ou busque pelo nome/código).</li>
+          <li><b>Defina o período</b> (ano inicial e ano final).</li>
+          <li><b>Selecione o nível de análise</b>:
+            <ul>
+              <li><b>Climograma:</b> comportamento médio por mês (com min/máx e barras de precipitação quando houver).</li>
+              <li><b>Série anual:</b> evolução ano a ano (com min/máx e precipitação anual em barras quando disponível).</li>
+              <li><b>Heatmap:</b> visão rápida de “anomalias” visuais (mês x ano), ótimo pra enxergar padrões.</li>
+              <li><b>Relação:</b> compara duas variáveis e ajusta tendência (linear/log/exp/polinomial) com R².</li>
+            </ul>
+          </li>
+          <li>Clique em <b>Gerar</b>.</li>
+          <li>Use <b>Baixar PNG</b> (figura) ou <b>Baixar CSV</b> (dados) para relatórios.</li>
+        </ol>
+
+        <h4>Dicas rápidas</h4>
+        <ul>
+          <li>Se a precipitação não aparecer, mude a “Variável 1” para <b>Precipitação (mm)</b>.</li>
+          <li>No Heatmap: <b>cinza</b> = sem dado; cores quentes = valores maiores no período.</li>
+          <li>No modo Relação: modelos “log” exigem <b>x &gt; 0</b> e “exp” exige <b>y &gt; 0</b>.</li>
+        </ul>
+
+        <p class="modalFoot">
+          Idealizado por <b>Ernandes Sobreira</b> · Dados INMET coletados em <b>dez/2025</b>.
+        </p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+
