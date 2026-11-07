@@ -129,6 +129,7 @@
   let stations = [];
   let filteredStations = [];
   let selectedStation = null;
+  let stationSelectionVersion = 0;
 
   let mode = "clim";
   let chart = null;
@@ -343,6 +344,7 @@
     markersLayer = L.layerGroup().addTo(map);
   }
   function renderMarkers(){
+    if(!markersLayer)return;
     markersLayer.clearLayers();
     for (const s of filteredStations){
       if (!Number.isFinite(s.lat) || !Number.isFinite(s.lon)) continue;
@@ -355,8 +357,32 @@
       mk.addTo(markersLayer);
     }
   }
+  async function loadStationVariables(station, version){
+    const years=station?.years || [];
+    fillSelect(var1, [], x=>x, x=>x, false);
+    fillSelect(var2, [], x=>x, x=>x, false);
+    // Fetch just the newest available pack to populate choices; run() still
+    // discovers all variables in the chosen range before doing calculations.
+    for(const year of years.slice().sort((a,b)=>b-a)){
+      try{
+        const pack=await loadPack(station.code,year);
+        if(version!==stationSelectionVersion)return;
+        const vars=collectVarsFromPacks([pack]);
+        if(!vars.length)continue;
+        fillSelect(var1,vars,k=>labelOfVar(k),k=>k,false);
+        fillSelect(var2,vars,k=>labelOfVar(k),k=>k,false);
+        var1.value=vars.includes("tmean")?"tmean":vars[0];
+        var2.value=vars.includes("p")?"p":vars[0];
+        return;
+      }catch(_){if(version!==stationSelectionVersion)return;}
+    }
+    if(version===stationSelectionVersion)setMsg("Não foi possível carregar as variáveis desta estação. Tente Gerar ou selecione outra estação.","err");
+  }
   function selectStation(code, zoom=true){
+    if(anaBusy)return;
+    if(isAna()){stationSelectionVersion++;return selectAnaStation(code,zoom);}
     selectedStation = stations.find(s=>s.code===code) || null;
+    const selectionVersion=++stationSelectionVersion;
 
     stationMeta.textContent = selectedStation
       ? `${selectedStation.name} · ${selectedStation.uf} · lat ${selectedStation.lat} lon ${selectedStation.lon}`
@@ -367,14 +393,18 @@
     // Usar anos realmente publicados por estação, sem teto fixo em 2024.
     const years = [...new Set((selectedStation?.years || []).map(Number).filter(Number.isInteger))]
       .sort((a,b)=>a-b).map(String);
-    fillSelect(yearStart, years, y=>y, y=>y, true);
-    fillSelect(yearEnd, years, y=>y, y=>y, true);
+    const previousStart=yearStart.value,previousEnd=yearEnd.value;
+    fillSelect(yearStart, years, y=>y, y=>y, false);
+    fillSelect(yearEnd, years, y=>y, y=>y, false);
     if (years.length) {
-      if (!years.includes(yearStart.value)) yearStart.value = years[0];
-      if (!years.includes(yearEnd.value)) yearEnd.value = years[years.length-1];
+      yearStart.value=years.includes(previousStart)?previousStart:years[0];
+      yearEnd.value=years.includes(previousEnd)?previousEnd:years[years.length-1];
     }
 
-    if (zoom && selectedStation && map){
+    if(selectedStation && years.length)void loadStationVariables(selectedStation,selectionVersion);
+    else{fillSelect(var1,[],x=>x,x=>x,false);fillSelect(var2,[],x=>x,x=>x,false);}
+
+    if (zoom && selectedStation && map && Number.isFinite(selectedStation.lat) && Number.isFinite(selectedStation.lon)){
       map.setView([selectedStation.lat, selectedStation.lon], 7, {animate:true});
     }
   }
@@ -399,6 +429,8 @@
 
     if (!filteredStations.length){
       selectedStation = null;
+      stationSelectionVersion++;
+      for(const select of [yearStart,yearEnd,var1,var2])fillSelect(select,[],x=>x,x=>x,false);
       stationMeta.textContent = "—";
       updatePills({station:"—", years:"—", data:"—"});
       return;
@@ -570,18 +602,22 @@
   }
 
   async function run(){
+    if(isAna())return runAna();
     try{
       if (!selectedStation){ setMsg("Selecione uma estação.", "err"); return; }
 
+      if(!yearStart.value || !yearEnd.value){setMsg("Selecione anos disponíveis para esta estação.","err");return;}
       let y0 = Number(yearStart.value);
       let y1 = Number(yearEnd.value);
-      if (!Number.isFinite(y0) || !Number.isFinite(y1)) { y0=2000; y1=2024; }
+      if (!Number.isInteger(y0) || !Number.isInteger(y1) || !selectedStation.years.includes(y0) || !selectedStation.years.includes(y1)) {setMsg("Período fora dos anos publicados para esta estação.","err");return;}
       if (y0>y1) [y0,y1]=[y1,y0];
 
       setMsg("Carregando dados...", "ok");
 
       const code = selectedStation.code;
+      const queryEpoch=sourceEpoch,queryMode=mode;
       const packs = await loadPacksForRange(code, y0, y1);
+      if(isAna()||sourceEpoch!==queryEpoch||selectedStation?.code!==code||mode!==queryMode)return;
 
       if (!packs.length){
         destroyChart();
@@ -1044,12 +1080,14 @@
       stations = Array.isArray(st) ? st : (st.stations || []);
       stations = stations.map(s=>({
         code: s.code || s.id || s.estacao || s.station || s.codigo,
-        name: s.name || s.nome || s.station_name || s.estacao_nome || s.city || s.municipio || "—",
-        uf: (s.uf || s.UF || s.estado || "—").toUpperCase(),
+        name: String(s.name || s.nome || s.station_name || s.estacao_nome || s.city || s.municipio || "—").replace(/^;+/,"").trim(),
+        uf: String(s.uf || s.UF || s.estado || "—").replace(/^;+/,"").trim().toUpperCase(),
+        years: [...new Set((Array.isArray(s.years)?s.years:[]).map(Number).filter(y=>Number.isInteger(y)&&y>=1800&&y<=new Date().getFullYear()))].sort((a,b)=>a-b),
         lat: Number(s.lat ?? s.latitude),
         lon: Number(s.lon ?? s.lng ?? s.longitude),
       })).filter(s=>!!s.code);
 
+      inmetStations=stations.slice();
       const ufs = Array.from(new Set(stations.map(s=>s.uf))).sort();
       fillSelect(ufSelect, ["Todas", ...ufs], x=>x, x=>x, false);
 
@@ -1071,6 +1109,7 @@
       }
 
       ufSelect.addEventListener("change", ()=>{
+        if(isAna()){searchStation.value="";loadAnaCatalog();return;}
         applyFilters(false);
         renderMarkers();
       });
@@ -1119,6 +1158,7 @@
       });
 
       btnReset.addEventListener("click", ()=>{
+        if(isAna()){searchStation.value="";setMode("clim");applyFilters(false);renderMarkers();return;}
         searchStation.value = "";
         ufSelect.value = "Todas";
         applyFilters(false);
@@ -1136,5 +1176,88 @@
     }
   }
 
-  init();
+  // ANA and INMET use the SAME filters, map, chart and table, never mixed.
+  const sourceSelect=$('sourceSelect'),anaType=$('anaType'),anaConsistency=$('anaConsistency');
+  const isAna=()=>sourceSelect.value==='ana';
+  const BRAZIL_UFS='AC AL AP AM BA CE DF ES GO MA MT MS MG PA PB PR PE PI RJ RN RS RO RR SC SP SE TO'.split(' ');
+  let inmetStations=[],sourceEpoch=0,anaBusy=false;
+  function clearSourceView(){destroyChart();setKpis([]);tableSet([]);selectedStation=null;stationMeta.textContent='—';chartTitle.textContent='Selecione uma estação';chartMeta.textContent='';updatePills({});}
+  async function activateSource(){
+    const epoch=++sourceEpoch;stationSelectionVersion++;yearStart.dataset.anaSet='';if(!map)initMap();clearSourceView();searchStation.value='';
+    $('anaMainControls').hidden=!isAna();
+    [optMinMax,optMean,optPrecBars].forEach(x=>x.disabled=isAna());
+    document.querySelector('.map-source-pill').textContent=isAna()?'ANA · Brasil':'INMET · Brasil';
+    document.querySelectorAll('.modeBtn').forEach(b=>{b.disabled=isAna()&&b.dataset.mode==='rel';});
+    if(isAna()){
+      if(mode==='rel')setMode('clim');
+      fillSelect(ufSelect,BRAZIL_UFS,x=>x,x=>x,false);ufSelect.value='MT';stations=[];filteredStations=[];
+      await loadAnaCatalog(epoch);
+    }else{var1.disabled=false;setMode(mode);stations=inmetStations.slice();const ufs=[...new Set(stations.map(x=>x.uf))].sort();fillSelect(ufSelect,['Todas',...ufs],x=>x,x=>x,false);applyFilters(false);renderMarkers();setMsg('INMET: dados publicados de cada estação.','ok');}
+  }
+  async function loadAnaCatalog(epoch=++sourceEpoch){
+    if(!isAna())return;const uf=ufSelect.value,type=anaType.value;
+    const controls=[sourceSelect,ufSelect,anaType,stationSelect,searchStation,btnRun];controls.forEach(x=>x.disabled=true);
+    stations=[];filteredStations=[];selectedStation=null;fillSelect(stationSelect,[],x=>x,x=>x,false);renderMarkers();
+    setMsg(`Carregando inventário ANA de ${uf}...`,'ok');
+    try{
+      const raw=await new AnaPublicApi().inventory(uf,type);if(epoch!==sourceEpoch||!isAna())return;
+      stations=raw.map(s=>({code:s.codigoestacao,name:s.Estacao_Nome,uf:s.UF_Estacao,lat:s.Latitude===null||String(s.Latitude).trim()===''?NaN:Number(s.Latitude),lon:s.Longitude===null||String(s.Longitude).trim()===''?NaN:Number(s.Longitude),start:s.Inicio,end:s.Fim,city:s.Municipio_Nome,source:'ANA'}));
+      applyFilters(false);renderMarkers();setMsg(`ANA: ${stations.length} estações em ${uf}. Cadastro não garante série completa; busque sua estação e clique Gerar.`,'ok');
+    }catch(e){setMsg(`Catálogo ANA: ${e.message}. A fonte pode estar temporariamente indisponível.`,'err');}
+    finally{controls.forEach(x=>x.disabled=false);}
+  }
+  function selectAnaStation(code,zoom){
+    selectedStation=stations.find(s=>s.code===code)||null;
+    stationMeta.textContent=selectedStation?`${selectedStation.name} · ${selectedStation.uf} · ANA · disponibilidade varia por período e consistência`:'—';
+    const first=Number(String(selectedStation?.start||'').match(/\d{4}/)?.[0]);const nowYear=new Date().getFullYear();
+    // Keep the user's comparison interval when changing variable/station; catalog periods are not a guarantee.
+    const start=1850;
+    const ys=Array.from({length:nowYear-start+1},(_,i)=>String(start+i));
+    fillSelect(yearStart,ys,x=>x,x=>x,true);fillSelect(yearEnd,ys,x=>x,x=>x,true);
+    if(!yearStart.value||+yearStart.value<start)yearStart.value=String(nowYear-1);
+    if(!yearEnd.value||+yearEnd.value<start)yearEnd.value=String(nowYear-1);
+    // For a newly selected ANA station use the latest complete calendar year, visibly preliminary.
+    if(!yearStart.dataset.anaSet){yearStart.value=String(nowYear-1);yearEnd.value=String(nowYear-1);yearStart.dataset.anaSet='yes';}
+    fillSelect(var1,[anaType.value],()=>ANAMain.specs[anaType.value].label,x=>x,false);var1.disabled=true;var2.disabled=true;
+    updatePills({station:code,years:`${yearStart.value}–${yearEnd.value}`,data:'ANA · consulta sob demanda'});
+    if(zoom&&selectedStation&&map&&Number.isFinite(selectedStation.lat)&&Number.isFinite(selectedStation.lon))map.setView([selectedStation.lat,selectedStation.lon],7);
+  }
+  async function runAna(){
+    if(anaBusy)return;if(!selectedStation)return setMsg('Selecione uma estação ANA.','err');
+    const y0=Number(yearStart.value),y1=Number(yearEnd.value),type=anaType.value,level=anaConsistency.value,station={...selectedStation},selectedMode=mode;
+    if(!yearStart.value||!yearEnd.value||y0>y1||y1-y0>59)return setMsg('Escolha um intervalo válido de até60anos.','err');
+    const controls=[sourceSelect,ufSelect,anaType,anaConsistency,stationSelect,searchStation,yearStart,yearEnd,btnRun,btnReset,...document.querySelectorAll('.modeBtn')];controls.forEach(x=>x.disabled=true);anaBusy=true;
+    setMsg('Consultando série oficial ANA...','ok');
+    try{
+      const points=await new AnaPublicApi().series({type,station:station.code,start:`${y0}-01-01`,end:`${y1}-12-31`,consistency:level});
+      if(!points.length){setMsg(`ANA: nenhuma observação real para ${y0}–${y1} no nível ${level}. ${level==='2'?'Pode haver dados brutos: selecione nível1 explicitamente.':'Mude o período ou estação; não preenchemos ausências com zero.'}`,'err');return;}
+      const a=ANAMain.aggregate(points,type,y0,y1),unit=a.spec.unit;const observed=a.years.filter(x=>x.dias),last=observed.at(-1);
+      setKpis([{k:`${last.ano} · ${type==='chuva'?'total observado':'média observada'}`,v:`${fmt(last.valor)} ${unit}`},{k:`Cobertura ${last.ano}`,v:`${fmt(last.cobertura*100,1)}%`},{k:'Dias reais',v:String(points.length)},{k:'Última medição',v:a.lastDate}]);
+      heatLegend.style.display='none';let rows,labels,datasets,options={responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top'}},scales:{y:{title:{display:true,text:unit}}}};
+      if(selectedMode==='clim'){
+        rows=a.months.filter(x=>x.dias).map(x=>({ano:x.ano,mes:x.mes,observado:x.observado,dias:x.dias,cobertura_pct:x.cobertura*100,situacao:x.completo?'completo':'parcial: excluído da média mensal'}));
+        labels=a.climatology.map(x=>monthName(x.mes));datasets=[{type:type==='chuva'?'bar':'line',label:`Média por mês (${unit}), somente meses completos`,data:a.climatology.map(x=>x.valor),borderWidth:2,pointRadius:3}];
+      }else if(selectedMode==='annual'){
+        rows=observed.map(x=>({ano:x.ano,valor_observado:x.valor,dias:x.dias,cobertura_pct:x.cobertura*100,situacao:x.completo?'completo':'parcial: não comparar como ano completo'}));
+        labels=observed.map(x=>x.ano);datasets=[{type:type==='chuva'?'bar':'line',label:`${type==='chuva'?'Total':'Média'} observado (${unit}); ver cobertura`,data:observed.map(x=>x.valor),borderWidth:2,pointRadius:3,backgroundColor:observed.map(x=>x.completo?'#168b91':'#b9d6da')}];
+      }else{
+        rows=a.months.filter(x=>x.dias).map(x=>({ano:x.ano,mes:x.mes,observado:x.observado,dias:x.dias,cobertura_pct:x.cobertura*100,situacao:x.completo?'completo':'parcial: célula sem valor'}));
+        const vals=a.months.map(x=>x.valor).filter(Number.isFinite),min=vals.length?Math.min(...vals):0,max=vals.length?Math.max(...vals):1;
+        datasets=[{type:'scatter',label:`Mensal (${unit}), somente meses completos`,data:a.months.map(x=>({x:x.ano,y:x.mes,v:x.valor})),pointStyle:'rectRounded',pointRadius:10,backgroundColor:c=>Number.isFinite(c.raw?.v)?heatColor((c.raw.v-min)/(max-min||1)):'#ddd'}];
+        options={...options,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.raw.x} ${monthName(c.raw.y)}: ${Number.isFinite(c.raw.v)?fmt(c.raw.v)+' '+unit:'mês incompleto/sem dado'}`}}},scales:{x:{type:'linear',min:y0-.5,max:y1+.5,ticks:{stepSize:1,callback:v=>Number.isInteger(v)?String(v):''},title:{display:true,text:'Ano'}},y:{min:1,max:12,ticks:{stepSize:1,callback:monthName}}}};
+      }
+      renderChart({data:{labels,datasets},options});tableSet(rows,null,2);
+      chartTitle.textContent=`${selectedMode==='clim'?'Climograma mensal':selectedMode==='annual'?'Série anual':'Mapa mensal'} — ${a.spec.label} · ${stationLabel(station)}`;
+      chartMeta.textContent=`ANA pública · ${level==='1'?'BRUTO/PRELIMINAR':'CONSISTIDO'} · ${y0}–${y1} · última observação ${a.lastDate} · consulta sob demanda, não tempo real`;
+      updatePills({station:station.code,years:`${y0}–${y1}`,data:`ANA · nível${level} · ${points.length} dias`});
+      lastCsvName=`ANA_${type}_${station.code}_${y0}_${y1}_nivel${level}.csv`;lastPngName=lastCsvName.replace('.csv','.png');
+      setMsg(`ANA: ${points.length} dias reais. Valores parciais identificados; meses incompletos não entram na média/heatmap. Sem mistura com INMET.`,'ok');
+    }catch(e){setMsg(`ANA: ${e.message}. Gráfico anterior preservado.`,'err');}
+    finally{anaBusy=false;controls.forEach(x=>x.disabled=false);document.querySelector('.modeBtn[data-mode="rel"]').disabled=true;var1.disabled=true;var2.disabled=true;}
+  }
+
+  sourceSelect.addEventListener("change",activateSource);
+  anaType.addEventListener("change",()=>{searchStation.value="";loadAnaCatalog();});
+  sourceSelect.disabled=true;init().finally(()=>{sourceSelect.disabled=false;});
 })();
+

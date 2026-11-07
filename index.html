@@ -16,20 +16,22 @@
   <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
   <!-- App -->
-  <script defer src="app.js"></script>
+  <script defer src="ana-beta/ana-public.js?v=main-ana-20261107b"></script>
+  <script defer src="ana-main-data.js?v=main-ana-20261107b"></script>
+  <script defer src="app.js?v=main-ana-20261107b"></script>
 </head>
 <body>
   <header class="topbar">
     <div class="brand">
       <div class="brandTitle">Climogramas BR <span class="badge">Atlas climático</span></div>
       <div class="brandSubtitle">
-        Atlas interativo de séries climáticas do Brasil · INMET · Estações meteorológicas.
+        Atlas interativo do Brasil · INMET + ANA · Clima e hidrologia.
         Idealizado por <b>Ernandes Sobreira; Wilkinson Kiwi Lopes Lázaro; Claumir Cesar Muniz</b>. Dados de origem INMET; cobertura conforme arquivo de cada estação.
       </div>
     </div>
 
     <div class="topActions">
-      <a class="backLink" href="ana-beta/">ANA Brasil · chuva, cota e vazão</a>
+      <a class="backLink" href="ana-beta/?v=4e6332cf">ANA Brasil · chuva, cota e vazão</a>
       <button id="btnHelp" class="helpBtn" type="button" title="Como usar">Como usar</button>
 
       <div class="statusPills">
@@ -43,12 +45,18 @@
     <div><span class="intro-kicker">OBSERVATÓRIO CLIMÁTICO · BRASIL</span>
     <h1>O clima do Brasil,<br>em dados e perspectiva.</h1>
     <p>Explore a temperatura, a precipitação e os padrões de milhares de registros por estação. Compare anos, descubra tendências e exporte visualizações científicas.</p></div>
-    <div class="hero-source"><b>Dados reais, estações georreferenciadas.</b><small>Fonte meteorológica: INMET · Série local disponível até 2024, conforme cobertura de cada estação. ANA/HidroWeb em validação, sem dados incorporados neste painel.</small></div>
+    <div class="hero-source"><b>Dados reais, estações georreferenciadas.</b><small>Selecione INMET ou ANA nos filtros abaixo. ANA Brasil: chuva, cota e vazão no mesmo mapa e gráficos. Fonte pública histórica pode ter defasagem; última medição e cobertura são mostradas. Não misturamos estações nem fontes.</small></div>
   </section>
 
   <main class="layout">
     <aside class="panel">
       <div class="section-tag">01 / Filtros de análise</div><h2>Seu recorte climático</h2>
+      <div class="field"><label for="sourceSelect">Fonte de dados</label><select id="sourceSelect"><option value="inmet">INMET · temperatura e clima</option><option value="ana">ANA Brasil · chuva, cota e vazão</option></select></div>
+      <div id="anaMainControls" hidden>
+        <div class="field"><label for="anaType">Variável ANA</label><select id="anaType"><option value="chuva">Chuva (mm)</option><option value="cotas">Cota (cm)</option><option value="vazao">Vazão (m³/s)</option></select></div>
+        <div class="field"><label for="anaConsistency">Consistência ANA</label><select id="anaConsistency"><option value="1">Bruto / preliminar (nível 1)</option><option value="2">Consistido (nível 2)</option></select></div>
+        <p class="small">Inventário nacional por UF. Dados históricos sob demanda, com defasagem possível. Gráfico mensal usa somente meses completos; totais parciais aparecem identificados na tabela. Relação entre variáveis fica disponível no INMET.</p>
+      </div>
 
       <div class="grid2">
         <div class="field">
@@ -242,3 +250,4 @@
   </div>
 </body>
 </html>
+
