@@ -1,5 +1,8 @@
 name: Atualizar INMET nacional e estatísticas
 on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/atualizar-inmet-nacional.yml']
   schedule:
     # 07:25 em Mato Grosso (UTC-4); GitHub pode atrasar execuções agendadas.
     - cron: '25 11 * * *'
@@ -31,19 +34,22 @@ jobs:
         with:
           python-version: '3.12'
       - name: Validar sincronizador sem rede
-        run: python -m unittest discover -s tests -p 'test_sync_inmet.py'
-      - name: Consultar ano atual e revisão mensal do anterior
+        run: |
+          python -m unittest discover -s tests -p 'test_sync_inmet.py'
+          python -m unittest discover -s tests -p 'test_plan_inmet_years.py'
+      - name: Consultar ano atual e um ano nacional pendente (2019 em diante)
         id: sync
         continue-on-error: true
         env:
           INCLUDE_PREVIOUS: ${{ inputs.ano_anterior || 'false' }}
           FORCE: ${{ inputs.forcar_reprocessamento || 'false' }}
         run: |
-          YEAR=$(date -u +%Y)
-          YEARS="$YEAR"
+          PLAN_FLAGS=""
           if [ "$(date -u +%d)" = "01" ] || [ "$INCLUDE_PREVIOUS" = "true" ]; then
-            YEARS="$((YEAR-1)) $YEAR"
+            PLAN_FLAGS="--include-previous"
           fi
+          YEARS=$(python tools/plan_inmet_years.py $PLAN_FLAGS)
+          echo "Anos nacionais desta execução: $YEARS"
           EXTRA=""
           if [ "$FORCE" = "true" ]; then EXTRA="--force"; fi
           python tools/sync_inmet.py --years $YEARS $EXTRA

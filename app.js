@@ -1180,7 +1180,8 @@
   const sourceSelect=$('sourceSelect'),anaType=$('anaType'),anaConsistency=$('anaConsistency');
   const isAna=()=>sourceSelect.value==='ana'||sourceSelect.value==='ana_recent';
   const BRAZIL_UFS='AC AL AP AM BA CE DF ES GO MA MT MS MG PA PB PR PE PI RJ RN RS RO RR SC SP SE TO'.split(' ');
-  let inmetStations=[],sourceEpoch=0,anaBusy=false;
+  let inmetStations=[],sourceEpoch=0,anaBusy=false,anaCancelled=false;
+  function anaNotice(message){setMsg(message,'err');if(!lastRows.length){chartTitle.textContent='Consulta ANA sem resultado';chartMeta.textContent=message;}else chartMeta.textContent+=' · '+message;}
   function clearSourceView(){destroyChart();setKpis([]);tableSet([]);selectedStation=null;stationMeta.textContent='—';chartTitle.textContent='Selecione uma estação';chartMeta.textContent='';updatePills({});}
   async function activateSource(){
     const epoch=++sourceEpoch;stationSelectionVersion++;yearStart.dataset.anaSet='';if(!map)initMap();clearSourceView();searchStation.value='';
@@ -1212,7 +1213,7 @@
   }
   function selectAnaStation(code,zoom){
     selectedStation=stations.find(s=>s.code===code)||null;
-    stationMeta.textContent=selectedStation?`${selectedStation.name} · ${selectedStation.uf} · ANA · disponibilidade varia por período e consistência`:'—';
+    stationMeta.textContent=selectedStation?`${selectedStation.code} · ${selectedStation.name} · ${selectedStation.uf} · cadastro desde ${selectedStation.start||'data não informada'} · lat ${selectedStation.lat}, lon ${selectedStation.lon}. Postos com nomes semelhantes são séries diferentes.`:'—';
     const first=Number(String(selectedStation?.start||'').match(/\d{4}/)?.[0]);const nowYear=new Date().getFullYear();
     // Keep the user's comparison interval when changing variable/station; catalog periods are not a guarantee.
     const start=1850;
@@ -1225,18 +1226,19 @@
     fillSelect(var1,[anaType.value],()=>ANAMain.specs[anaType.value].label,x=>x,false);var1.disabled=true;var2.disabled=true;
     if(isRecent()){yearStart.disabled=true;yearEnd.disabled=true;}
     updatePills({station:code,years:`${yearStart.value}–${yearEnd.value}`,data:'ANA · consulta sob demanda'});
-    if(zoom&&selectedStation&&map&&Number.isFinite(selectedStation.lat)&&Number.isFinite(selectedStation.lon))map.setView([selectedStation.lat,selectedStation.lon],7);
+    if(selectedStation&&map&&Number.isFinite(selectedStation.lat)&&Number.isFinite(selectedStation.lon))map.setView([selectedStation.lat,selectedStation.lon],7);
   }
   async function runAna(){
     if(isRecent())return runRecent();
     if(anaBusy)return;if(!selectedStation)return setMsg('Selecione uma estação ANA.','err');
     const y0=Number(yearStart.value),y1=Number(yearEnd.value),type=anaType.value,level=anaConsistency.value,station={...selectedStation},selectedMode=mode;
-    if(!yearStart.value||!yearEnd.value||y0>y1||y1-y0>59)return setMsg('Escolha um intervalo válido de até60anos.','err');
+    if(!yearStart.value||!yearEnd.value||y0>y1||y0<1850||y1>new Date().getFullYear())return anaNotice('Escolha um intervalo entre 1850 e o ano atual, com início anterior ao fim.');
+    const previousTitle=chartTitle.textContent,previousMeta=chartMeta.textContent;let renderedNew=false;
     const controls=[sourceSelect,ufSelect,anaType,anaConsistency,stationSelect,searchStation,yearStart,yearEnd,btnRun,btnReset,...document.querySelectorAll('.modeBtn')];controls.forEach(x=>x.disabled=true);anaBusy=true;
-    setMsg('Consultando série oficial ANA...','ok');
+    anaCancelled=false;$('cancelAna').disabled=false;$('cancelAna').hidden=false;chartTitle.textContent=`Consultando ANA · ${station.code} · ${station.name}`;chartMeta.textContent='Consulta oficial com limite de90segundos por requisição e8MB de resposta; você pode cancelar.';setMsg('Consultando série oficial ANA...','ok');
     try{
-      const points=await new AnaPersistentApi().series({type,station:station.code,start:`${y0}-01-01`,end:`${y1}-12-31`,consistency:level});
-      if(!points.length){setMsg(`ANA: nenhuma observação real para ${y0}–${y1} no nível ${level}. ${level==='2'?'Pode haver dados brutos: selecione nível1 explicitamente.':'Mude o período ou estação; não preenchemos ausências com zero.'}`,'err');return;}
+      const points=await new AnaPersistentApi().series({type,station:station.code,start:`${y0}-01-01`,end:`${y1}-12-31`,consistency:level,isCancelled:()=>anaCancelled,onProgress:({year,completed,total})=>{chartMeta.textContent=`API ANA: ${completed}/${total} etapas · período ${year}. Aguarde a resposta oficial.`;}});
+      if(!points.length){anaNotice(`ANA: nenhuma observação real para ${y0}–${y1} no nível ${level}. ${level==='2'?'Pode haver dados brutos: selecione nível 1 explicitamente.':'Este posto não retornou dados neste recorte. Postos homônimos têm códigos e séries próprios; selecione outra estação ou período.'}`);return;}
       const a=ANAMain.aggregate(points,type,y0,y1),unit=a.spec.unit;const observed=a.years.filter(x=>x.dias),last=observed.at(-1);
       setKpis([{k:`${last.ano} · ${type==='chuva'?'total observado':'média observada'}`,v:`${fmt(last.valor)} ${unit}`},{k:`Cobertura ${last.ano}`,v:`${fmt(last.cobertura*100,1)}%`},{k:'Dias reais',v:String(points.length)},{k:'Última medição',v:a.lastDate}]);
       heatLegend.style.display='none';let rows,labels,datasets,options={responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top'}},scales:{y:{title:{display:true,text:unit}}}};
@@ -1252,14 +1254,14 @@
         datasets=[{type:'scatter',label:`Mensal (${unit}), somente meses completos`,data:a.months.map(x=>({x:x.ano,y:x.mes,v:x.valor})),pointStyle:'rectRounded',pointRadius:10,backgroundColor:c=>Number.isFinite(c.raw?.v)?heatColor((c.raw.v-min)/(max-min||1)):'#ddd'}];
         options={...options,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.raw.x} ${monthName(c.raw.y)}: ${Number.isFinite(c.raw.v)?fmt(c.raw.v)+' '+unit:'mês incompleto/sem dado'}`}}},scales:{x:{type:'linear',min:y0-.5,max:y1+.5,ticks:{stepSize:1,callback:v=>Number.isInteger(v)?String(v):''},title:{display:true,text:'Ano'}},y:{min:1,max:12,ticks:{stepSize:1,callback:monthName}}}};
       }
-      renderChart({data:{labels,datasets},options});tableSet(rows,null,2);
+      renderChart({data:{labels,datasets},options});tableSet(rows,null,2);renderedNew=true;
       chartTitle.textContent=`${selectedMode==='clim'?'Climograma mensal':selectedMode==='annual'?'Série anual':'Mapa mensal'} — ${a.spec.label} · ${stationLabel(station)}`;
-      chartMeta.textContent=`ANA pública · ${level==='1'?'BRUTO/PRELIMINAR':'CONSISTIDO'} · ${y0}–${y1} · última observação ${a.lastDate} · ${points.persistence?.snapshots?"acervo automático: "+points.persistence.snapshots+" ano(s)":"consulta direta"}${points.persistence?.stale?' · CACHE PRESERVADO: última consulta falhou ou não confirmou dados; confira a data da medição':''} · última coleta não equivale à última medição`;
+      chartMeta.textContent=`ANA pública · ${level==='1'?'BRUTO/PRELIMINAR':'CONSISTIDO'} · ${y0}–${y1} · última observação ${a.lastDate} · ${points.persistence?.snapshots?"acervo automático: "+points.persistence.snapshots+" ano(s)":"consulta direta"}${points.persistence?.stale?' · CACHE PRESERVADO: última consulta falhou ou não confirmou dados; confira a data da medição':''}${points.failedYears?.length?' · FALHA DE CONSULTA nos anos '+points.failedYears.join(', ')+': resultado incompleto':''} · última coleta não equivale à última medição`;
       updatePills({station:station.code,years:`${y0}–${y1}`,data:`ANA · nível${level} · ${points.length} dias`});
       lastCsvName=`ANA_${type}_${station.code}_${y0}_${y1}_nivel${level}.csv`;lastPngName=lastCsvName.replace('.csv','.png');
       setMsg(`ANA: ${points.length} dias reais. Valores parciais identificados; meses incompletos não entram na média/heatmap. Sem mistura com INMET.`,'ok');
-    }catch(e){setMsg(`ANA: ${e.message}. Gráfico anterior preservado.`,'err');}
-    finally{anaBusy=false;controls.forEach(x=>x.disabled=false);document.querySelector('.modeBtn[data-mode="rel"]').disabled=true;var1.disabled=true;var2.disabled=true;}
+    }catch(e){anaNotice(`ANA: ${e.message}. Resultado anterior, se existente, preservado.`);}
+    finally{if(!renderedNew&&lastRows.length){const notice=chartMeta.textContent;chartTitle.textContent=previousTitle;chartMeta.textContent=previousMeta+' · Resultado anterior preservado. '+notice;}$('cancelAna').hidden=true;anaBusy=false;controls.forEach(x=>x.disabled=false);document.querySelector('.modeBtn[data-mode="rel"]').disabled=true;var1.disabled=true;var2.disabled=true;}
   }
 
   const isRecent=()=>sourceSelect.value==='ana_recent';
@@ -1304,6 +1306,8 @@
       }catch{setMsg('Atualização do catálogo INMET indisponível; resultado anterior preservado.','err');}
     }
   });
+
+  $('cancelAna').addEventListener('click',()=>{anaCancelled=true;$('cancelAna').disabled=true;chartMeta.textContent='Cancelando após a requisição atual; nenhuma nova consulta será iniciada.';});
 
   sourceSelect.addEventListener("change",activateSource);
   anaType.addEventListener("change",()=>{searchStation.value="";loadAnaCatalog();});

@@ -48,4 +48,31 @@ class Tests(unittest.TestCase):
    m.write(root/'catalog/MT.json',{'stations':[station,{**station,'code':'999999'}]});args.max_cache_mib=0;args.series_budget=1;seen.clear()
    with contextlib.redirect_stdout(io.StringIO()):status=m.run(args,ok)
    self.assertEqual(seen,['1657003']);self.assertTrue(status['storage_limited']);self.assertFalse((root/'series/chuva/999999/2000.json').exists())
+ def test_adaptive_current_only_and_backoff(self):
+  station={'code':'1657003','operating':'1','candidate_variables':['chuva']}
+  q,allq=m.adaptive_tasks({'MT':[station]},[2025,2026],{'tasks':{}},'2026-11-07T20:00:00+00:00')
+  self.assertEqual(len(q),1);self.assertEqual(q[0]['year'],2026);self.assertEqual(q[0]['level'],'1')
+  t=q[0];r={'status':'empty_preserved','last_success_utc':'2026-11-07T20:00:00+00:00','usable_response_count':0}
+  m.set_next_due(r,'2026-11-07T20:00:00+00:00',2026)
+  state={'tasks':{m.taskkey(t):r}}
+  q,allq=m.adaptive_tasks({'MT':[station]},[2025,2026],state,'2026-11-07T21:00:00+00:00')
+  self.assertEqual(len(q),1);self.assertEqual(q[0]['year'],2025)
+  self.assertTrue(r['next_due_utc'].startswith('2026-12-07'))
+ def test_adaptive_positive_does_not_starve_discovery(self):
+  stations=[{'code':str(1657000+i),'operating':'1','candidate_variables':['chuva']} for i in range(4)]
+  state={'tasks':{}}
+  for s in stations[:2]:state['tasks'][f"MT:{s['code']}:chuva:2026:1"]={'usable_response_count':31,'last_attempt_utc':'2026-10-01T00:00:00+00:00'}
+  q,_=m.adaptive_tasks({'MT':stations},[2026],state,'2026-11-07T20:00:00+00:00')
+  self.assertEqual([x['code'] for x in q],[stations[i]['code'] for i in (0,2,1,3)])
+ def test_adaptive_error_backoff_and_catalog_retry(self):
+  r={'status':'error'};m.set_next_due(r,'2026-11-07T00:00:00+00:00',2026)
+  self.assertEqual(r['next_due_utc'],'2026-11-07T03:00:00+00:00')
+  m.set_next_due(r,'2026-11-07T03:00:00+00:00',2026)
+  self.assertEqual(r['next_due_utc'],'2026-11-07T09:00:00+00:00')
+  with tempfile.TemporaryDirectory() as d:
+   args=types.SimpleNamespace(output=d,catalog_budget=1,series_budget=0,max_seconds=30,delay_seconds=0,years=[2026],adaptive=True)
+   def fail(*a):raise TimeoutError()
+   with contextlib.redirect_stdout(io.StringIO()):m.run(args,fail)
+   status=m.read(pathlib.Path(d)/'status.json',{});rec=status['catalog_status']['AC']
+   self.assertEqual(rec['consecutive_failures'],1);self.assertGreater(rec['next_due_utc'],rec['last_attempt_utc'])
 if __name__=='__main__':unittest.main()

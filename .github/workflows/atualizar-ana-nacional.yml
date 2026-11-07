@@ -39,7 +39,7 @@ jobs:
           if [ "$BOOTSTRAPPED" = "no" ]; then
             python tools/sync_ana.py --catalog-budget 27 --series-budget 20 --max-seconds 1800 --delay-seconds 2
           else
-            python tools/sync_ana.py --catalog-budget 1 --series-budget 20 --max-seconds 900 --delay-seconds 2
+            python tools/sync_ana.py --catalog-budget 3 --series-budget 100 --max-seconds 1800 --delay-seconds 2
           fi
       - name: Atualizar camada telemétrica recente separada
         id: recent

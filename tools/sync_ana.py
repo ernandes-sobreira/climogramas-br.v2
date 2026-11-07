@@ -88,6 +88,55 @@ def build_tasks(catalogs,years,active_only=False):
             if i<len(groups.get(uf,[])): result.append(groups[uf][i])
     return result
 
+def timestamp(value):
+    try:return dt.datetime.fromisoformat(value.replace('Z','+00:00')).timestamp()
+    except (ValueError,TypeError,AttributeError):return 0
+
+def next_due(attempt,hours):
+    return (dt.datetime.fromisoformat(attempt)+dt.timedelta(hours=hours)).isoformat()
+
+def adaptive_tasks(catalogs,years,state,now):
+    """Discover latest year once, not four empty year/level combinations.
+    Both levels returned by ANA remain separate on disk. A previous-year probe
+    is allowed only after current-year discovery or if it already held data.
+    Half the request slots favor due proven series; half discover geographically.
+    """
+    current=max(years); all_tasks=build_tasks(catalogs,[current],active_only=True)
+    all_tasks=[t for t in all_tasks if t['level']=='1']
+    historical=[]
+    for t in all_tasks:
+        cur=state['tasks'].get(taskkey(t),{})
+        for year in years:
+            if year==current:continue
+            old={**t,'year':year}; rec=state['tasks'].get(taskkey(old),{})
+            if rec.get('usable_response_count',0)>0 or (cur.get('last_success_utc') and not cur.get('usable_response_count',0)):
+                historical.append(old)
+    all_tasks+=historical
+    due=[t for t in all_tasks if timestamp(state['tasks'].get(taskkey(t),{}).get('next_due_utc'))<=timestamp(now)]
+    positive=[]; discovery=[]
+    for t in due:
+        r=state['tasks'].get(taskkey(t),{})
+        (positive if r.get('usable_response_count',0)>0 else discovery).append(t)
+    positive.sort(key=lambda t:state['tasks'].get(taskkey(t),{}).get('last_attempt_utc',''))
+    discovery.sort(key=lambda t:(t['year']!=current,state['tasks'].get(taskkey(t),{}).get('last_attempt_utc','')))
+    queue=[]
+    for i in range(max(len(positive),len(discovery))):
+        if i<len(positive):queue.append(positive[i])
+        if i<len(discovery):queue.append(discovery[i])
+    return queue,all_tasks
+
+def set_next_due(rec,attempt,year):
+    if rec.get('status')=='error':
+        rec['consecutive_failures']=rec.get('consecutive_failures',0)+1
+        hours=min(168,3*2**min(rec['consecutive_failures']-1,6))
+    else:
+        rec['consecutive_failures']=0
+        if not rec.get('usable_response_count',0):hours=24*30
+        elif year<dt.date.today().year:hours=24*30
+        elif (dt.date.today()-dt.date.fromisoformat(rec['latest_observation_date'])).days>14:hours=24*7
+        else:hours=24
+    rec['next_due_utc']=next_due(attempt,hours)
+
 def taskkey(t):return f"{t['uf']}:{t['code']}:{t['kind']}:{t['year']}:{t['level']}"
 
 def merge_success(old,parsed,task,attempt):
@@ -124,9 +173,14 @@ def run(args,request=fetch,clock=time.monotonic):
     state=read(root/'state.json',{'catalog_cursor':0,'tasks':{},'catalog_attempts':{},'runs':0})
     started=clock();requests=0;now=utcnow();ufs=list(STATES)
     # Incremental catalog bootstrap/refresh: bounded independent state per UF.
-    for _ in range(args.catalog_budget):
+    adaptive=getattr(args,'adaptive',False)
+    candidates=ufs[state['catalog_cursor']%27:]+ufs[:state['catalog_cursor']%27]
+    if adaptive:
+        candidates=[u for u in candidates if timestamp(state['catalog_attempts'].get(u,{}).get('next_due_utc'))<=timestamp(now)]
+        candidates.sort(key=lambda u:(bool(state['catalog_attempts'].get(u,{}).get('last_success_utc')),state['catalog_attempts'].get(u,{}).get('last_attempt_utc','')))
+    for uf in candidates[:args.catalog_budget]:
         if clock()-started>=args.max_seconds:break
-        uf=ufs[state['catalog_cursor']%len(ufs)];state['catalog_cursor']=(state['catalog_cursor']+1)%len(ufs)
+        state['catalog_cursor']=(ufs.index(uf)+1)%len(ufs)
         record={'last_attempt_utc':utcnow()};path=root/'catalog'/f'{uf}.json';previous=read(path,{})
         try:
             requests+=1;xml=request('HidroInventario',catalog_params(uf));stations=parse_inventory(xml,uf)
@@ -135,6 +189,10 @@ def run(args,request=fetch,clock=time.monotonic):
             record.update(last_success_utc=record['last_attempt_utc'],status='ok',count=len(stations))
         except Exception as exc:
             record.update(status='error',error_type=type(exc).__name__,last_success_utc=state['catalog_attempts'].get(uf,{}).get('last_success_utc'))
+        if adaptive:
+            failures=state['catalog_attempts'].get(uf,{}).get('consecutive_failures',0)+1 if record['status']=='error' else 0
+            record['consecutive_failures']=failures
+            record['next_due_utc']=next_due(record['last_attempt_utc'],min(72,2**min(failures-1,7)) if failures else 24*30)
         state['catalog_attempts'][uf]=record
         write(root/'state.json',state)
         if args.delay_seconds:time.sleep(args.delay_seconds)
@@ -143,6 +201,8 @@ def run(args,request=fetch,clock=time.monotonic):
     tasks=build_tasks(catalogs,args.years,active_only=not getattr(args,'include_inactive',False))
     # Earliest attempt first; stable geographic round-robin among new tasks.
     tasks.sort(key=lambda t:state['tasks'].get(taskkey(t),{}).get('last_attempt_utc',''))
+    all_tasks=tasks
+    if adaptive:tasks,all_tasks=adaptive_tasks(catalogs,args.years,state,now)
     completed=0;storage_limited=False;cache_limit=getattr(args,'max_cache_mib',350)*1024*1024
     cache_bytes=sum(p.stat().st_size for p in root.rglob('*.json'))
     storage_limited=cache_bytes>=cache_limit
@@ -182,18 +242,19 @@ def run(args,request=fetch,clock=time.monotonic):
             priorcheck=read(path.with_name(f"{task['year']}-nivel{task['level']}-status.json"),{})
             write(path.with_name(f"{task['year']}-nivel{task['level']}-status.json"),{**priorcheck,'last_attempt_utc':attempt,'last_result':'error_preserved','error_type':type(exc).__name__})
             # Never write an error into a successful series file or discard it.
+        if adaptive:set_next_due(rec,attempt,task['year'])
         state['tasks'][key]=rec;completed+=1;write(root/'state.json',state)
         if args.delay_seconds:time.sleep(args.delay_seconds)
     state['runs']+=1;state['last_run_utc']=now
     if args.catalog_budget>=27:state['bootstrap_attempted']=True
     write(root/'state.json',state)
-    records=[state['tasks'].get(taskkey(t),{}) for t in tasks]
-    status={'schema_version':1,'last_run_utc':now,'requests_this_run':requests,'storage_limited':storage_limited,'cache_limit_bytes':cache_limit,'series_attempts_this_run':completed,'catalog_ufs_available':len(catalogs),'catalog_ufs_expected':27,'catalog_complete':len(catalogs)==27,'catalog_status':state['catalog_attempts'],'catalog_station_count':sum(map(len,catalogs.values())),'years_requested':args.years,'task_count':len(tasks),'tasks_attempted':sum(bool(r) for r in records),'tasks_successful':sum(bool(r.get('last_success_utc')) for r in records),'tasks_with_usable_observations':sum(r.get('usable_response_count',0)>0 for r in records),'tasks_with_retained_data':sum(bool(r.get('latest_observation_date')) for r in records),'recent_queue_active_only':not getattr(args,'include_inactive',False),'inactive_or_unknown_stations_not_in_recent_queue':sum(s.get('operating')!='1' for v in catalogs.values() for s in v),'tasks_last_error':sum(r.get('status')=='error' for r in records),'configured_series_budget_per_run':args.series_budget,'minimum_runs_per_rotation':math.ceil(len(tasks)/args.series_budget) if args.series_budget else None,'national_series_complete':False,'last_success_utc':max((r['last_success_utc'] for r in records if r.get('last_success_utc')),default=None),'last_attempt_utc':max((r['last_attempt_utc'] for r in records if r.get('last_attempt_utc')),default=None),'cache_bytes':sum(p.stat().st_size for p in root.rglob('*.json')), 'warning':'Incremental rotating cache, not simultaneous national refresh. Counted tasks include station/variable/year/consistency combinations; successful retrieval does not imply fresh or complete measurements.'}
+    records=[state['tasks'].get(taskkey(t),{}) for t in all_tasks]
+    status={'schema_version':1,'last_run_utc':now,'requests_this_run':requests,'storage_limited':storage_limited,'cache_limit_bytes':cache_limit,'series_attempts_this_run':completed,'catalog_ufs_available':len(catalogs),'catalog_ufs_expected':27,'catalog_complete':len(catalogs)==27,'catalog_status':state['catalog_attempts'],'catalog_station_count':sum(map(len,catalogs.values())),'years_requested':args.years,'task_count':len(all_tasks),'due_tasks_this_run':len(tasks),'adaptive_queue':adaptive,'queue_policy':'latest-year level1 discovery; separate returned levels; positive refresh plus discovery; empty30days/error backoff' if adaptive else 'legacy exhaustive','tasks_attempted':sum(bool(r) for r in records),'tasks_successful':sum(bool(r.get('last_success_utc')) for r in records),'tasks_with_usable_observations':sum(r.get('usable_response_count',0)>0 for r in records),'tasks_with_retained_data':sum(bool(r.get('latest_observation_date')) for r in records),'recent_queue_active_only':not getattr(args,'include_inactive',False),'inactive_or_unknown_stations_not_in_recent_queue':sum(s.get('operating')!='1' for v in catalogs.values() for s in v),'tasks_last_error':sum(r.get('status')=='error' for r in records),'configured_series_budget_per_run':args.series_budget,'minimum_runs_per_rotation':math.ceil(len(all_tasks)/args.series_budget) if args.series_budget else None,'national_series_complete':False,'last_success_utc':max((r['last_success_utc'] for r in records if r.get('last_success_utc')),default=None),'last_attempt_utc':max((r['last_attempt_utc'] for r in records if r.get('last_attempt_utc')),default=None),'cache_bytes':sum(p.stat().st_size for p in root.rglob('*.json')), 'warning':'Incremental rotating cache, not simultaneous national refresh. Counted tasks include station/variable/year/consistency combinations; successful retrieval does not imply fresh or complete measurements.'}
     write(root/'status.json',status);print(json.dumps(status,ensure_ascii=False));return status
 
 def main():
-    p=argparse.ArgumentParser();p.add_argument('--output',default='assets/ana');p.add_argument('--catalog-budget',type=int,default=1);p.add_argument('--series-budget',type=int,default=20);p.add_argument('--max-seconds',type=int,default=900);p.add_argument('--delay-seconds',type=float,default=2);p.add_argument('--years',nargs='+',type=int);p.add_argument('--include-inactive',action='store_true');p.add_argument('--max-cache-mib',type=int,default=350)
-    args=p.parse_args();args.years=args.years or [dt.date.today().year-1,dt.date.today().year]
+    p=argparse.ArgumentParser();p.add_argument('--legacy-queue',action='store_true');p.add_argument('--output',default='assets/ana');p.add_argument('--catalog-budget',type=int,default=1);p.add_argument('--series-budget',type=int,default=20);p.add_argument('--max-seconds',type=int,default=900);p.add_argument('--delay-seconds',type=float,default=2);p.add_argument('--years',nargs='+',type=int);p.add_argument('--include-inactive',action='store_true');p.add_argument('--max-cache-mib',type=int,default=350)
+    args=p.parse_args();args.adaptive=not args.legacy_queue;args.years=args.years or [dt.date.today().year-1,dt.date.today().year]
     if not 10<=args.max_cache_mib<=500 or not 0<=args.catalog_budget<=27 or not 0<=args.series_budget<=100 or not 1<=args.max_seconds<=1800 or not 1<=len(args.years)<=2 or any(y<1850 or y>dt.date.today().year for y in args.years):p.error('unsafe_budget_or_years')
     run(args)
 if __name__=='__main__':main()
