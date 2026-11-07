@@ -1,11 +1,30 @@
 {
-  "updated_utc": "2026-11-06T18:09:32.114103+00:00",
+  "updated_utc": "2026-11-07T20:26:39.470057+00:00",
   "years": [
+    {
+      "year": 2025,
+      "processed_utc": "2026-11-07T20:26:39.470057+00:00",
+      "last_success_utc": "2026-11-07T20:26:39.470057+00:00",
+      "checked_utc": "2026-11-07T20:26:39.470057+00:00",
+      "stations": 594,
+      "skipped_files": 0,
+      "source_sha256": "14988d0b736ba969b48881589f602f3a6d7e97b95bd1de934456851fdac2cb89",
+      "status": "updated",
+      "last_check_ok": true
+    },
     {
       "year": 2026,
       "stations": 634,
       "skipped_files": 0,
-      "source_sha256": "e50640dee9556273fcdf02874fc88518c5a82a377e3780eb0fcdf202cb9006fd"
+      "source_sha256": "e50640dee9556273fcdf02874fc88518c5a82a377e3780eb0fcdf202cb9006fd",
+      "processed_utc": "2026-11-06T18:09:32.114103+00:00",
+      "last_success_utc": "2026-11-07T20:28:49.449609+00:00",
+      "checked_utc": "2026-11-07T20:28:49.449609+00:00",
+      "status": "unchanged",
+      "last_check_ok": true
     }
-  ]
+  ],
+  "checked_utc": "2026-11-07T20:29:47.498757+00:00",
+  "last_success_utc": "2026-11-07T20:28:49.449609+00:00",
+  "status": "ok"
 }
