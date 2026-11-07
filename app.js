@@ -75,7 +75,13 @@
   function downloadPngSync(chart, filename){
     const url = chart?.toBase64Image?.("image/png", 1);
     if (!url || typeof url !== "string") throw new Error("Falha ao gerar PNG (toBase64Image).");
-    clickDownload(url, filename);
+    const comma=url.indexOf(',');
+    if(!url.startsWith('data:image/png;base64,')||comma<0)throw Error('Imagem PNG inválida.');
+    const raw=atob(url.slice(comma+1)),bytes=new Uint8Array(raw.length);
+    for(let i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);
+    const objectUrl=URL.createObjectURL(new Blob([bytes],{type:'image/png'}));
+    clickDownload(objectUrl,filename);
+    setTimeout(()=>URL.revokeObjectURL(objectUrl),60000);
     return true;
   }
 
@@ -236,7 +242,7 @@
     if (!rows || !rows.length) return "";
     const cols = columns?.length ? columns : Object.keys(rows[0]);
     const esc = (s) => {
-      const t = String(s ?? "");
+      const t = typeof s === "number" && Number.isFinite(s) ? String(Number(s.toPrecision(15))) : String(s ?? "");
       if (/[",\n;]/.test(t)) return `"${t.replaceAll('"','""')}"`;
       return t;
     };
