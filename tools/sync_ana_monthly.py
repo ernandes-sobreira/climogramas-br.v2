@@ -2,11 +2,59 @@
 """Bounded national archive bootstrap and monthly summaries; no credentials.
 Independent outputs: never modifies the original catalog or daily snapshots.
 """
-import argparse, calendar, datetime as dt, hashlib, json, pathlib, time, socket
+import argparse, calendar, datetime as dt, hashlib, json, pathlib, time, socket, math, unicodedata
 from sync_ana import TYPES, STATES, fetch, parse_series, read, write, utcnow
 from ana_summary_codec import encode, decode, write_bytes, scientifically_equal
 
 PERIODS={'chuva':'PeriodoPluviometro','cotas':'PeriodoEscala','vazao':'PeriodoDescLiquida'}
+# Municipal screening from FCO2025 AnnexVII, not an official biome polygon.
+# The entire municipality can extend beyond the Pantanal; do not label its
+# stations as inside the biome without a separate point-in-polygon validation.
+PANTANAL_MUNICIPALITIES={
+ 'MT':set("CURVELANDIA|CUIABA|FIGUEIROPOLIS D OESTE|GLORIA D OESTE|MIRASSOL D OESTE|PORTO ESPERIDIAO|VARZEA GRANDE|SANTO ANTONIO DO LEVERGER|BARAO DE MELGACO|CACERES|ITIQUIRA|LAMBARI D OESTE|POCONE|NOSSA SENHORA DO LIVRAMENTO".split('|')),
+ 'MS':set("RIO VERDE DE MATO GROSSO|LADARIO|PORTO MURTINHO|SONORA|MIRANDA|COXIM|CORUMBA|BODOQUENA|AQUIDAUANA".split('|'))}
+def municipality_name(value):
+    text=''.join(c for c in unicodedata.normalize('NFKD',str(value or '')) if not unicodedata.combining(c)).upper()
+    return ' '.join(''.join(c if c.isalnum() else ' ' for c in text).split())
+
+def station_priority(station,uf):
+    try:
+        if station.get('lat') is None or station.get('lon') is None:raise ValueError()
+        lat=float(station['lat']);lon=float(station['lon'])
+        if not math.isfinite(lat) or not math.isfinite(lon) or not -90<=lat<=90 or not -180<=lon<=180:raise ValueError()
+        a,b=map(math.radians,(-16.076,-57.681));x,y=map(math.radians,(lat,lon))
+        h=math.sin((x-a)/2)**2+math.cos(a)*math.cos(x)*math.sin((y-b)/2)**2
+        km=6371.0088*2*math.asin(math.sqrt(min(1,max(0,h))))
+        if km<=150:return 1,'caceres_radius_150km'
+    except (ValueError,TypeError,OverflowError):pass
+    name=municipality_name(station.get('municipality'))
+    # ANA legacy inventory may truncate municipality fields. Match only a long,
+    # unambiguous prefix within the same UF; never infer a biome polygon.
+    if name.startswith('SANTO ANTONIO DE '):name=name.replace('SANTO ANTONIO DE ','SANTO ANTONIO DO ',1)
+    known=PANTANAL_MUNICIPALITIES.get(uf,set())
+    if name in known:return 2,'pantanal_municipality_screening'
+    if len(name)>=15 and sum(candidate.startswith(name) for candidate in known)==1:return 2,'screening_truncated_name'
+    return 3,'national'
+
+def regional_queue(ordered):
+    near=[t for t in ordered if t.get('priority_rank',3)==1]
+    pantanal=[t for t in ordered if t.get('priority_rank',3)==2]
+    national=[t for t in ordered if t.get('priority_rank',3)==3]
+    from collections import deque
+    a,b=deque(near),deque(pantanal);prioritized=[]
+    while a or b:
+        for _ in range(3):
+            if a:prioritized.append(a.popleft())
+        if b:prioritized.append(b.popleft())
+        elif a:prioritized.append(a.popleft())
+    a,b=deque(prioritized),deque(national);result=[]
+    while a or b:
+        for _ in range(4):
+            if a:result.append(a.popleft())
+        if b:result.append(b.popleft())
+        elif a:result.append(a.popleft())
+    return result
+
 def year_of(value, fallback, current_year=None):
     try: return max(1850,min(current_year or dt.date.today().year,int(str(value)[:4])))
     except (TypeError,ValueError): return fallback
@@ -16,6 +64,7 @@ def tasks(catalogs, today):
     for uf,stations in catalogs.items():
         group=[]
         for station in sorted(stations,key=lambda x:x['code']):
+            rank,reason=station_priority(station,uf)
             for kind in station.get('candidate_variables',[]):
                 if kind not in TYPES:continue
                 periods=station.get('periods',{});prefix=PERIODS[kind]
@@ -27,7 +76,7 @@ def tasks(catalogs, today):
                 if unknown:first=max(1850,last-1)
                 for start in reversed(list(range(first,last+1,60))):
                     for level in ('1','2'):
-                        group.append(dict(uf=uf,code=station['code'],kind=kind,level=level,start=start,end=min(start+59,last),historical_start_unknown=unknown))
+                        group.append(dict(uf=uf,code=station['code'],kind=kind,level=level,start=start,end=min(start+59,last),historical_start_unknown=unknown,priority_rank=rank,priority_reason=reason))
         groups[uf]=sorted(group,key=lambda t:(t['historical_start_unknown'],-t['end'],t['level']))
     for i in range(max(map(len,groups.values()),default=0)):
         for uf in STATES:
@@ -40,7 +89,7 @@ def expanded_tasks(base,state):
         inherited=max(not_before,rec.get('retry_after') or '')
         splits=rec.get('split_tasks')
         if splits:
-            for child in splits:visit(child,inherited)
+            for child in splits:visit({**child,**{name:t[name] for name in ('priority_rank','priority_reason') if name in t}},inherited)
         else:out.append({**t,'not_before':inherited} if inherited else t)
     for task in base:visit(task)
     return out
@@ -99,7 +148,7 @@ def due_queue(all_tasks,state,today,now):
     for i in range(max(len(monthly),len(bootstrap),len(historical))):
         for group in (monthly,bootstrap,historical):
             if i<len(group):result.append(group[i])
-    return result
+    return regional_queue(result)
 
 def archive_metrics(root):
     # Count each station/variable/level once; compact takes precedence over legacy.
@@ -123,7 +172,11 @@ def run(args, request=fetch, today=None):
     state=read(statepath,{'tasks':{},'schema_version':1});write(statepath,state);catalogs={uf:read(root/'catalog'/f'{uf}.json',{}).get('stations',[]) for uf in STATES}
     all_tasks=expanded_tasks(list(tasks(catalogs,today)),state);now=utcnow();queue=due_queue(all_tasks,state,today,now)
     begun=time.monotonic();attempted=0;success=0;limited=False
-    for task in queue:
+    pending=list(queue)
+    while pending:
+        want_national=attempted%5==4
+        position=next((i for i,t in enumerate(pending) if (t.get('priority_rank',3)==3)==want_national),0)
+        task=pending.pop(position)
         if attempted>=args.budget or time.monotonic()-begun>=args.max_seconds:break
         # A previous request in this run may already have returned this level.
         if state['tasks'].get(key(task),{}).get('last_success_utc','')>=now:continue
@@ -168,7 +221,7 @@ def run(args, request=fetch, today=None):
                 if children:record.update(status='split_pending',split_tasks=children)
         state['tasks'][k]=record;write(statepath,state)
         if args.delay:time.sleep(args.delay)
-    status=dict(schema_version=1,last_run_utc=now,requests_this_run=attempted,success_this_run=success,catalog_ufs=sum(bool(s) for s in catalogs.values()),tasks_total=len(all_tasks),tasks_completed=sum(bool(state['tasks'].get(key(t),{}).get('last_success_utc')) for t in all_tasks),storage_limited=limited,unknown_start_tasks=sum(t.get('historical_start_unknown',False) for t in all_tasks),national_series_complete=False,warning='Staged national bootstrap including inactive stations. Successful empty queries do not imply observations exist. Monthly revisions; no guarantee all stations are current.')
+    status=dict(schema_version=1,last_run_utc=now,requests_this_run=attempted,success_this_run=success,catalog_ufs=sum(bool(s) for s in catalogs.values()),tasks_total=len(all_tasks),tasks_completed=sum(bool(state['tasks'].get(key(t),{}).get('last_success_utc')) for t in all_tasks),storage_limited=limited,unknown_start_tasks=sum(t.get('historical_start_unknown',False) for t in all_tasks),priority_policy='4 regional slots to 1 national; regional 3 radius150km to 1 municipality; municipal screening not biome polygon',priority_tasks={str(rank):sum(t.get('priority_rank',3)==rank for t in all_tasks) for rank in (1,2,3)},national_series_complete=False,warning='Staged national bootstrap including inactive stations. Successful empty queries do not imply observations exist. Monthly revisions; no guarantee all stations are current.')
     status.update(archive_metrics(root))
     write(root/'monthly-status.json',status);return status
 

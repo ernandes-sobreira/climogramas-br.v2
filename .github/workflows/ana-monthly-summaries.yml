@@ -1,3 +1,4 @@
+# Regional priority: Cáceres and Pantanal; national coverage retained.
 # Next bounded batch requested; split retries inherit cooldown, 2026-11-08.
 # Extra bounded batch requested by owner after successful first batch, 2026-11-08.
 name: ANA resumos mensais e carga histórica por etapas
@@ -20,6 +21,8 @@ jobs:
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -27,6 +30,7 @@ jobs:
         run: |
           python -m unittest discover -s tests/monthly -v
           python -m unittest discover -s tests/compressed -v
+          python -m unittest discover -s tests/priority -v
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -34,6 +38,7 @@ jobs:
         run: |
           node tests/frontend/test-fast.cjs
           node tests/frontend/test-compact.cjs
+          node tests/frontend/test-ana-default.cjs
       - name: Coleta histórica limitada e retomável
         run: python tools/sync_ana_monthly.py --budget 100 --max-seconds 1500 --max-mib 350 --delay 2 --compressed
       - name: Publicar apenas resumos e checkpoints

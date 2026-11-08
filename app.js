@@ -1272,6 +1272,12 @@
     }catch(e){setMsg(`Catálogo ANA: ${e.message}. A fonte pode estar temporariamente indisponível.`,'err');}
     finally{controls.forEach(x=>x.disabled=false);}
   }
+  function suggestedAnaYear(station,currentYear){
+    const start=Number(String(station?.start||'').match(/^\d{4}/)?.[0]);
+    const end=Number(String(station?.end||'').match(/^\d{4}/)?.[0]);
+    if(end>=1850&&end<currentYear)return end;
+    return start>=currentYear&&start<=currentYear?currentYear:currentYear-1;
+  }
   function selectAnaStation(code,zoom){
     selectedStation=stations.find(s=>s.code===code)||null;
     stationMeta.textContent=selectedStation?`${selectedStation.code} · ${selectedStation.name} · ${selectedStation.uf} · cadastro desde ${selectedStation.start||'data não informada'} · lat ${selectedStation.lat}, lon ${selectedStation.lon}. Postos com nomes semelhantes são séries diferentes.`:'—';
@@ -1282,8 +1288,13 @@
     fillSelect(yearStart,ys,x=>x,x=>x,true);fillSelect(yearEnd,ys,x=>x,x=>x,true);
     if(!yearStart.value||+yearStart.value<start)yearStart.value=String(nowYear-1);
     if(!yearEnd.value||+yearEnd.value<start)yearEnd.value=String(nowYear-1);
-    // For a newly selected ANA station use the latest complete calendar year, visibly preliminary.
-    if(!yearStart.dataset.anaSet){yearStart.value=String(nowYear-1);yearEnd.value=String(nowYear-1);yearStart.dataset.anaSet='yes';}
+    // Use the final registered year for closed stations, but never overwrite a user's interval.
+    if(yearStart.dataset.anaSet!=='user'){
+      const suggested=suggestedAnaYear(selectedStation,nowYear);
+      yearStart.value=String(suggested);yearEnd.value=String(suggested);yearStart.dataset.anaSet='suggested';
+    }
+    const endYear=Number(String(selectedStation?.end||'').match(/^\d{4}/)?.[0]);
+    if(endYear>=1850&&endYear<nowYear)stationMeta.textContent+=` Série histórica: término cadastrado em ${endYear}. ${yearStart.dataset.anaSet==='user'?'Seu intervalo foi mantido.':'Ano inicial sugerido pelo cadastro.'} Isso não indica medição atual nem garante cobertura completa.`;
     fillSelect(var1,[anaType.value],()=>ANAMain.specs[anaType.value].label,x=>x,false);var1.disabled=true;var2.disabled=true;
     if(isRecent()){yearStart.disabled=true;yearEnd.disabled=true;}
     updatePills({station:code,years:`${yearStart.value}–${yearEnd.value}`,data:'ANA · consulta sob demanda'});
@@ -1371,10 +1382,12 @@
 
   $('cancelAna').addEventListener('click',()=>{anaCancelled=true;$('cancelAna').disabled=true;chartMeta.textContent='Cancelando após a requisição atual; nenhuma nova consulta será iniciada.';});
 
+  for(const control of [yearStart,yearEnd])control.addEventListener('change',()=>{if(isAna())yearStart.dataset.anaSet='user';});
   sourceSelect.addEventListener("change",activateSource);
   anaType.addEventListener("change",()=>{searchStation.value="";loadAnaCatalog();});
   sourceSelect.disabled=true;init().finally(()=>{sourceSelect.disabled=false;});
 })();
+
 
 
 
