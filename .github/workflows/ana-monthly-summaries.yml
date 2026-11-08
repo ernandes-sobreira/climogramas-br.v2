@@ -1,3 +1,4 @@
+# Continue owner-authorized regional batch after successful 42486163239, 2026-11-08.
 # Regional priority: Cáceres and Pantanal; national coverage retained.
 # Next bounded batch requested; split retries inherit cooldown, 2026-11-08.
 # Extra bounded batch requested by owner after successful first batch, 2026-11-08.
