@@ -1,0 +1,42 @@
+name: ANA resumos mensais e carga histórica por etapas
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/ana-monthly-summaries.yml']
+  workflow_dispatch:
+  schedule:
+    - cron: '35 12 * * *'
+permissions:
+  contents: write
+  pages: write
+concurrency:
+  group: climogramas-data-sync
+  cancel-in-progress: false
+jobs:
+  summaries:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validar sem rede
+        run: python -m unittest discover -s tests/monthly -v
+      - name: Coleta histórica limitada e retomável
+        run: python tools/sync_ana_monthly.py --budget 100 --max-seconds 1500 --max-mib 150 --delay 2
+      - name: Publicar apenas resumos e checkpoints
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add assets/ana/monthly-state.json assets/ana/monthly-status.json
+          if [ -d assets/ana/summaries ]; then git add assets/ana/summaries/; fi
+          if ! git diff --cached --quiet; then
+            git commit -m 'data(ana): resumos mensais e progresso histórico preservados'
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
+      - name: Solicitar build Pages
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash scripts/request_pages_build.sh

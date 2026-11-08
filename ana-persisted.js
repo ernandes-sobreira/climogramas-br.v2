@@ -2,7 +2,29 @@
 (()=>{
 'use strict';
 const ROOT=new URL('assets/ana/',document.currentScript.src).toString();
-async function read(path){try{const r=await fetch(new URL(path,ROOT),{cache:'no-store'});if(!r.ok)return null;return await r.json();}catch{return null;}}
+async function read(path){try{const r=await fetch(new URL(path,ROOT),{cache:'no-cache'});if(!r.ok)return null;return await r.json();}catch{return null;}}
+// Cache successful results across chart modes, bounded to protect mobile memory.
+const seriesCache=new Map();
+const CACHE_TTL=15*60*1000;
+function covered(ranges,start,end){
+ let cursor=start;
+ for(const r of [...(ranges||[])].sort((a,b)=>a.start.localeCompare(b.start))){
+  if(r.end<cursor)continue;if(r.start>cursor)return false;
+  if(r.end>=end)return true;
+  cursor=new Date(Date.parse(r.end+'T00:00:00Z')+86400000).toISOString().slice(0,10);
+ }return false;
+}
+async function summary(args){
+ const {type,station,start,end,consistency='2'}=args;
+ const b=await read(`summaries/${type}/${station}/nivel${consistency}.json`);
+ if(b?.schema_version!==1||String(b.station)!==station||b.variable!==type||String(b.consistency)!==String(consistency)||!Array.isArray(b.months)||!Array.isArray(b.years)||!covered(b.checked_ranges,start,end))return null;
+ const y0=+start.slice(0,4),y1=+end.slice(0,4);
+ const months=b.months.filter(x=>x.ano>=y0&&x.ano<=y1),years=b.years.filter(x=>x.ano>=y0&&x.ano<=y1);
+ const climatology=Array.from({length:12},(_,i)=>{const rows=months.filter(x=>x.mes===i+1&&x.completo&&Number.isFinite(x.valor));return{mes:i+1,valor:rows.length?rows.reduce((n,x)=>n+x.valor,0)/rows.length:null,anos_completos:rows.length};});
+ const result=[];result.precomputed={spec:ANAMain.specs[type],months,years,climatology,lastDate:months.map(x=>x.last_date).filter(Boolean).sort().at(-1)||null};
+ result.persistence={snapshots:years.length,summary:true,last_success_utc:b.last_success_utc,stale:!!b.stale};result.failedYears=[];
+ return result;
+}
 class AnaPersistentApi extends AnaPublicApi{
  async inventory(uf,type='chuva'){
   const b=await read(`catalog/${uf}.json`);
@@ -11,6 +33,18 @@ class AnaPersistentApi extends AnaPublicApi{
   return b.stations.filter(x=>String(x.station_type)===wanted).map(x=>({codigoestacao:String(x.code),Estacao_Nome:x.name,UF_Estacao:x.uf,Municipio_Nome:x.municipality,Latitude:x.lat,Longitude:x.lon,Tipo_Estacao:x.station_type,Operando:x.operating,Inicio:x.periods?.[type==='chuva'?'PeriodoPluviometroInicio':type==='cotas'?'PeriodoEscalaInicio':'PeriodoDescLiquidaInicio']||'',Fim:x.periods?.[type==='chuva'?'PeriodoPluviometroFim':type==='cotas'?'PeriodoEscalaFim':'PeriodoDescLiquidaFim']||''}));
  }
  async series(args){
+  if(!['chuva','cotas','vazao'].includes(args.type)||!/^\d{5,8}$/.test(args.station||'')||!['1','2'].includes(String(args.consistency||'2'))||!/^\d{4}-\d{2}-\d{2}$/.test(args.start||'')||!/^\d{4}-\d{2}-\d{2}$/.test(args.end||''))throw Error('Consulta inválida.');
+  const y0=+args.start.slice(0,4),y1=+args.end.slice(0,4);if(y1<y0||y0<1850||y1>new Date().getFullYear())throw Error('Intervalo fora de 1850 até o ano atual.');
+  const key=JSON.stringify([args.type,args.station,args.start,args.end,String(args.consistency||'2')]);
+  const cached=seriesCache.get(key);if(cached&&Date.now()-cached.at<CACHE_TTL)return cached.value;
+  if(args.isCancelled?.())throw Error('Consulta cancelada.');
+  let precomputed=null;try{precomputed=await summary(args);}catch{/* malformed summary never hides the original archive */}
+  const value=precomputed||await this.liveSeries(args);
+  if(args.isCancelled?.())throw Error('Consulta cancelada.');
+  if(!value.failedYears?.length){seriesCache.delete(key);seriesCache.set(key,{at:Date.now(),value});while(seriesCache.size>8)seriesCache.delete(seriesCache.keys().next().value);}
+  return value;
+ }
+ async liveSeries(args){
   const {type,station,start,end,consistency='2'}=args;
   if(!['chuva','cotas','vazao'].includes(type)||!/^\d{5,8}$/.test(station||'')||!['1','2'].includes(String(consistency))||!/^\d{4}-\d{2}-\d{2}$/.test(start||'')||!/^\d{4}-\d{2}-\d{2}$/.test(end||''))throw Error('Consulta inválida.');
   const y0=+start.slice(0,4),y1=+end.slice(0,4);if(y1<y0||y0<1850||y1>new Date().getFullYear())throw Error('Intervalo fora de 1850 até o ano atual.');
@@ -54,6 +88,8 @@ class AnaPersistentApi extends AnaPublicApi{
   return result;
  }
 }
+AnaPersistentApi.clearCache=()=>seriesCache.clear();
 window.AnaPersistentApi=AnaPersistentApi;
 window.AnaAutomationStatus={read:()=>read('status.json')};
 })();
+

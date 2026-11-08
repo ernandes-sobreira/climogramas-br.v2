@@ -294,7 +294,9 @@
   async function loadPack(code, year){
     const key = `${code}_${year}`;
     if (packCache.has(key)) return packCache.get(key);
-    const obj = await fetchJson(dataUrl(code, year));
+    const response = await fetch(dataUrl(code, year), {cache:"no-cache"});
+    if(!response.ok)throw new Error(`HTTP ${response.status}`);
+    const obj = await response.json();
     obj.year = year;
     if (!Array.isArray(obj.months)) obj.months = [];
     packCache.set(key, obj);
@@ -302,13 +304,17 @@
   }
 
   async function loadPacksForRange(code, y0, y1){
-    const packs = [];
-    for (let y=y0; y<=y1; y++){
-      const ok = await yearExists(code, y);
-      if (!ok) continue;
-      try{ packs.push(await loadPack(code, y)); } catch(_){}
-    }
-    return packs;
+    // The published catalog is authoritative: no serial HEAD requests per year.
+    const station=stations.find(s=>s.code===code);
+    const years=(station?.years||[]).map(Number).filter(y=>y>=y0&&y<=y1).sort((a,b)=>a-b);
+    const packs=[],failed=[];let cursor=0;
+    await Promise.all(Array.from({length:Math.min(4,years.length)},async()=>{
+      while(cursor<years.length){const year=years[cursor++];
+        try{packs.push(await loadPack(code,year));}catch(_){failed.push(year);}
+      }
+    }));
+    if(failed.length)throw Error(`Não foi possível carregar os anos ${failed.sort().join(', ')}. Tente novamente; resultado anterior preservado.`);
+    return packs.sort((a,b)=>a.year-b.year);
   }
 
   function collectVarsFromPacks(packs){
@@ -1156,7 +1162,10 @@
 
       for (const btn of document.querySelectorAll(".modeBtn")){
         btn.addEventListener("click", ()=>{
+          if(chartLoading||anaBusy)return;
           setMode(btn.getAttribute("data-mode"));
+          if(selectedStation && lastRows.length)run();
+          else setMsg("Modo selecionado. Escolha estação e período e clique Gerar.", "ok");
         });
       }
 
@@ -1290,9 +1299,9 @@
     anaCancelled=false;$('cancelAna').disabled=false;$('cancelAna').hidden=false;chartTitle.textContent=`Consultando ANA · ${station.code} · ${station.name}`;chartMeta.textContent='Consulta oficial com limite de90segundos por requisição e8MB de resposta; você pode cancelar.';setMsg('Consultando série oficial ANA...','ok');
     try{
       const points=await new AnaPersistentApi().series({type,station:station.code,start:`${y0}-01-01`,end:`${y1}-12-31`,consistency:level,isCancelled:()=>anaCancelled,onProgress:({year,completed,total})=>{chartMeta.textContent=`API ANA: ${completed}/${total} etapas · período ${year}. Aguarde a resposta oficial.`;}});
-      if(!points.length){anaNotice(`ANA: nenhuma observação real para ${y0}–${y1} no nível ${level}. ${level==='2'?'Pode haver dados brutos: selecione nível 1 explicitamente.':'Este posto não retornou dados neste recorte. Postos homônimos têm códigos e séries próprios; selecione outra estação ou período.'}`);return;}
-      const a=ANAMain.aggregate(points,type,y0,y1),unit=a.spec.unit;const observed=a.years.filter(x=>x.dias),last=observed.at(-1);
-      setKpis([{k:`${last.ano} · ${type==='chuva'?'total observado':'média observada'}`,v:`${fmt(last.valor)} ${unit}`},{k:`Cobertura ${last.ano}`,v:`${fmt(last.cobertura*100,1)}%`},{k:'Dias reais',v:String(points.length)},{k:'Última medição',v:a.lastDate}]);
+      if(!points.length&&!points.precomputed?.years.some(y=>y.dias)){anaNotice(`ANA: nenhuma observação real para ${y0}–${y1} no nível ${level}. ${level==='2'?'Pode haver dados brutos: selecione nível 1 explicitamente.':'Este posto não retornou dados neste recorte. Postos homônimos têm códigos e séries próprios; selecione outra estação ou período.'}`);return;}
+      const a=points.precomputed||ANAMain.aggregate(points,type,y0,y1),unit=a.spec.unit;const observed=a.years.filter(x=>x.dias),last=observed.at(-1);
+      setKpis([{k:`${last.ano} · ${type==='chuva'?'total observado':'média observada'}`,v:`${fmt(last.valor)} ${unit}`},{k:`Cobertura ${last.ano}`,v:`${fmt(last.cobertura*100,1)}%`},{k:'Dias reais',v:String(a.years.reduce((n,y)=>n+y.dias,0))},{k:'Última medição',v:a.lastDate}]);
       heatLegend.style.display='none';let rows,labels,datasets,options={responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top'}},scales:{y:{title:{display:true,text:unit}}}};
       if(selectedMode==='clim'){
         rows=a.months.filter(x=>x.dias).map(x=>({ano:x.ano,mes:x.mes,observado:x.observado,dias:x.dias,cobertura_pct:x.cobertura*100,situacao:x.completo?'completo':'parcial: excluído da média mensal'}));
@@ -1308,10 +1317,10 @@
       }
       renderChart({data:{labels,datasets},options});tableSet(rows,null,2);renderedNew=true;
       chartTitle.textContent=`${selectedMode==='clim'?'Climograma mensal':selectedMode==='annual'?'Série anual':'Mapa mensal'} — ${a.spec.label} · ${stationLabel(station)}`;
-      chartMeta.textContent=`ANA pública · ${level==='1'?'BRUTO/PRELIMINAR':'CONSISTIDO'} · ${y0}–${y1} · última observação ${a.lastDate} · ${points.persistence?.snapshots?"acervo automático: "+points.persistence.snapshots+" ano(s)":"consulta direta"}${points.persistence?.stale?' · CACHE PRESERVADO: última consulta falhou ou não confirmou dados; confira a data da medição':''}${points.failedYears?.length?' · FALHA DE CONSULTA nos anos '+points.failedYears.join(', ')+': resultado incompleto':''} · última coleta não equivale à última medição`;
-      updatePills({station:station.code,years:`${y0}–${y1}`,data:`ANA · nível${level} · ${points.length} dias`});
+      chartMeta.textContent=`ANA pública · ${level==='1'?'BRUTO/PRELIMINAR':'CONSISTIDO'} · ${y0}–${y1} · última observação ${a.lastDate} · ${points.persistence?.summary?"resumo pré-calculado · ":""}${points.persistence?.snapshots?"acervo automático: "+points.persistence.snapshots+" ano(s)":"consulta direta"}${points.persistence?.stale?' · CACHE PRESERVADO: última consulta falhou ou não confirmou dados; confira a data da medição':''}${points.failedYears?.length?' · FALHA DE CONSULTA nos anos '+points.failedYears.join(', ')+': resultado incompleto':''} · última coleta não equivale à última medição`;
+      updatePills({station:station.code,years:`${y0}–${y1}`,data:`ANA · nível${level} · ${points.precomputed?points.precomputed.years.reduce((n,y)=>n+y.dias,0):points.length} dias`});
       lastCsvName=`ANA_${type}_${station.code}_${y0}_${y1}_nivel${level}.csv`;lastPngName=lastCsvName.replace('.csv','.png');
-      setMsg(`ANA: ${points.length} dias reais. Valores parciais identificados; meses incompletos não entram na média/heatmap. Sem mistura com INMET.`,'ok');
+      setMsg(`ANA: ${points.precomputed?points.precomputed.years.reduce((n,y)=>n+y.dias,0):points.length} dias reais. Valores parciais identificados; meses incompletos não entram na média/heatmap. Sem mistura com INMET.`,'ok');
     }catch(e){anaNotice(`ANA: ${e.message}. Resultado anterior, se existente, preservado.`);}
     finally{if(!renderedNew&&lastRows.length){const notice=chartMeta.textContent;chartTitle.textContent=previousTitle;chartMeta.textContent=previousMeta+' · Resultado anterior preservado. '+notice;}$('cancelAna').hidden=true;anaBusy=false;controls.forEach(x=>x.disabled=false);document.querySelector('.modeBtn[data-mode="rel"]').disabled=true;var1.disabled=true;var2.disabled=true;}
   }
@@ -1342,7 +1351,7 @@
   window.addEventListener('climogramas-data-updated',async()=>{
     if(document.visibilityState!=='visible'||anaBusy||!selectedStation||!lastRows.length)return;
     if(chartLoading)return;
-    if(isAna())run();else{
+    if(isAna()){AnaPersistentApi.clearCache();run();}else{
       const epoch=sourceEpoch,selectionVersion=stationSelectionVersion,code=selectedStation.code,uf=ufSelect.value;
       try{
         const raw=await fetchJson(new URL('stations.json',ASSETS).toString());
@@ -1366,5 +1375,6 @@
   anaType.addEventListener("change",()=>{searchStation.value="";loadAnaCatalog();});
   sourceSelect.disabled=true;init().finally(()=>{sourceSelect.disabled=false;});
 })();
+
 
 
