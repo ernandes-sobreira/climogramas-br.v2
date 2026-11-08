@@ -23,15 +23,25 @@ jobs:
         with:
           python-version: '3.12'
       - name: Validar sem rede
-        run: python -m unittest discover -s tests/monthly -v
+        run: |
+          python -m unittest discover -s tests/monthly -v
+          python -m unittest discover -s tests/compressed -v
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validar transporte compacto e cache
+        run: |
+          node tests/frontend/test-fast.cjs
+          node tests/frontend/test-compact.cjs
       - name: Coleta histórica limitada e retomável
-        run: python tools/sync_ana_monthly.py --budget 100 --max-seconds 1500 --max-mib 150 --delay 2
+        run: python tools/sync_ana_monthly.py --budget 100 --max-seconds 1500 --max-mib 350 --delay 2 --compressed
       - name: Publicar apenas resumos e checkpoints
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add assets/ana/monthly-state.json assets/ana/monthly-status.json
           if [ -d assets/ana/summaries ]; then git add assets/ana/summaries/; fi
+          if [ -d assets/ana/compact ]; then git add assets/ana/compact/; fi
           if ! git diff --cached --quiet; then
             git commit -m 'data(ana): resumos mensais e progresso histórico preservados'
             git pull --rebase origin main

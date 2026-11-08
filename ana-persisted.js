@@ -16,7 +16,8 @@ function covered(ranges,start,end){
 }
 async function summary(args){
  const {type,station,start,end,consistency='2'}=args;
- const b=await read(`summaries/${type}/${station}/nivel${consistency}.json`);
+ const compact=window.AnaCompact?await window.AnaCompact.read(args):null;
+ const b=(compact&&covered(compact.checked_ranges,start,end)?compact:null)||await read(`summaries/${type}/${station}/nivel${consistency}.json`);
  if(b?.schema_version!==1||String(b.station)!==station||b.variable!==type||String(b.consistency)!==String(consistency)||!Array.isArray(b.months)||!Array.isArray(b.years)||!covered(b.checked_ranges,start,end))return null;
  const y0=+start.slice(0,4),y1=+end.slice(0,4);
  const months=b.months.filter(x=>x.ano>=y0&&x.ano<=y1),years=b.years.filter(x=>x.ano>=y0&&x.ano<=y1);

@@ -16,11 +16,11 @@ class MonthlyTests(unittest.TestCase):
         task=dict(code='1657000',uf='MT',kind='chuva',level='1',start=2024,end=2024)
         a=m.merge({},m.summarize(parsed(29),2024,'1','chuva'),task,'2026-01-01',dt.date(2026,1,1))
         b=m.merge(a,m.summarize(parsed(1),2024,'1','chuva'),task,'2026-02-01',dt.date(2026,2,1))
-        self.assertEqual(b['months'][1]['dias'],29);self.assertTrue(b['retained_after_regression'])
+        self.assertEqual(b['months'][0]['dias'],29);self.assertTrue(b['retained_after_regression'])
     def test_inactive_included(self):
         station=dict(code='1657000',candidate_variables=['chuva'],operating='0',periods={'PeriodoPluviometroInicio':'1912-01-01','PeriodoPluviometroFim':'1999-12-31'})
         tasks=list(m.tasks({'MT':[station]},dt.date(2026,1,1)))
-        self.assertEqual(min(t['start'] for t in tasks),1912);self.assertEqual(tasks[0]['end'],1999);self.assertEqual(len(tasks),18)
+        self.assertEqual(min(t['start'] for t in tasks),1912);self.assertEqual(tasks[0]['end'],1999);self.assertEqual(len(tasks),4)
     def test_weighted_mean(self):
         rows=m.summarize(parsed(29,2),2024,'1','cotas');self.assertEqual(m.annual(rows,'cotas',dt.date(2026,1,1))[0]['valor'],2)
     def test_error_preserves_and_checkpoints(self):
@@ -47,4 +47,29 @@ class MonthlyTests(unittest.TestCase):
         tasks=list(m.tasks({'MT':[station]},dt.date(2027,1,1)))
         self.assertEqual(tasks[0]['end'],2027)
         self.assertTrue(any(t['end']==2027 for t in m.due_queue(tasks,{'tasks':{}},dt.date(2027,1,1),'2027-01-01')))
+    def test_unknown_no_1850_sweep(self):
+        station=dict(code='1657000',candidate_variables=['cotas','vazao'],periods={})
+        tasks=list(m.tasks({'MT':[station]},dt.date(2026,1,1)))
+        self.assertEqual(len(tasks),4);self.assertEqual(tasks[0]['start'],2025)
+        self.assertTrue(tasks[0]['historical_start_unknown'])
+    def test_sparse_empty_ranges(self):
+        task=dict(code='1657000',uf='MT',kind='chuva',level='1',start=1900,end=1959)
+        rows=[]
+        for year in range(1900,1960):rows.extend(m.summarize({'observations':[]},year,'1','chuva'))
+        out=m.merge({},rows,task,'2026-11-08',dt.date(2026,11,8))
+        self.assertEqual(out['months'],[]);self.assertTrue(out['empty'])
+        self.assertEqual(out['checked_ranges'][0]['start'],'1900-01-01')
+    def test_split_bound_and_preserve(self):
+        task=dict(code='1657000',uf='MT',kind='chuva',level='1',start=1900,end=1959)
+        children=m.split_task(task);self.assertEqual(len(children),6)
+        state={'tasks':{m.key(task):{'split_tasks':children}}}
+        self.assertEqual(m.expanded_tasks([task],state),children)
+    def test_both_levels_one_request(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=pathlib.Path(tmp);m.write(root/'catalog/MT.json',{'stations':[dict(code='1657000',candidate_variables=['chuva'],periods={'PeriodoPluviometroInicio':'2026','PeriodoPluviometroFim':'2026'})]})
+            args=SimpleNamespace(root=tmp,budget=2,max_seconds=20,max_mib=10,delay=0)
+            xml=b'<DataSet>'+b''.join(b'<SerieHistorica><EstacaoCodigo>1657000</EstacaoCodigo><NivelConsistencia>'+level+b'</NivelConsistencia><DataHora>2026-01-01</DataHora><Chuva01>1</Chuva01><Chuva01Status>1</Chuva01Status></SerieHistorica>' for level in (b'1',b'2'))+b'</DataSet>'
+            status=m.run(args,request=lambda *a,**k:xml,today=dt.date.today())
+            self.assertEqual(status['requests_this_run'],1)
+            self.assertTrue((root/'summaries/chuva/1657000/nivel2.json').exists())
 if __name__=='__main__':unittest.main()
