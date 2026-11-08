@@ -35,11 +35,13 @@ def tasks(catalogs, today):
 
 def expanded_tasks(base,state):
     out=[]
-    def visit(t):
-        splits=state['tasks'].get(key(t),{}).get('split_tasks')
+    def visit(t,not_before=''):
+        rec=state['tasks'].get(key(t),{})
+        inherited=max(not_before,rec.get('retry_after') or '')
+        splits=rec.get('split_tasks')
         if splits:
-            for child in splits:visit(child)
-        else:out.append(t)
+            for child in splits:visit(child,inherited)
+        else:out.append({**t,'not_before':inherited} if inherited else t)
     for task in base:visit(task)
     return out
 
@@ -84,7 +86,7 @@ def due_queue(all_tasks,state,today,now):
     monthly=[];bootstrap=[];historical=[]
     for t in all_tasks:
         r=state['tasks'].get(key(t),{});last=r.get('last_success_utc')
-        if (r.get('retry_after') or '')>now:continue
+        if max(r.get('retry_after') or '',t.get('not_before') or '')>now:continue
         if not last:bootstrap.append(t)
         elif t['end']>=today.year-1 and last[:7]!=today.strftime('%Y-%m'):monthly.append(t)
         elif last[:4]!=str(today.year):historical.append(t)

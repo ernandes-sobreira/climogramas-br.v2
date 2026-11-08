@@ -72,4 +72,10 @@ class MonthlyTests(unittest.TestCase):
             status=m.run(args,request=lambda *a,**k:xml,today=dt.date.today())
             self.assertEqual(status['requests_this_run'],1)
             self.assertTrue((root/'summaries/chuva/1657000/nivel2.json').exists())
+    def test_split_inherits_cooldown(self):
+        task=dict(uf='MT',code='1657000',kind='chuva',level='1',start=1960,end=2026)
+        state={'tasks':{m.key(task):{'split_tasks':m.split_task(task),'retry_after':'2026-11-09T12:00:00+00:00'}}}
+        expanded=m.expanded_tasks([task],state)
+        self.assertEqual(m.due_queue(expanded,state,dt.date(2026,11,8),'2026-11-08T13:00:00+00:00'),[])
+        self.assertTrue(m.due_queue(expanded,state,dt.date(2026,11,9),'2026-11-09T13:00:00+00:00'))
 if __name__=='__main__':unittest.main()
