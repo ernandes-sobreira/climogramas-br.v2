@@ -30,6 +30,8 @@ jobs:
     timeout-minutes: 180
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -37,7 +39,7 @@ jobs:
         run: |
           python -m unittest discover -s tests -p 'test_sync_inmet.py'
           python -m unittest discover -s tests -p 'test_plan_inmet_years.py'
-      - name: Consultar ano atual e um ano nacional pendente (2019 em diante)
+      - name: Consultar ano atual e um ano nacional pendente (2000 em diante)
         id: sync
         continue-on-error: true
         env:

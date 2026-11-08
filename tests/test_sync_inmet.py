@@ -75,3 +75,25 @@ class SyncTest(unittest.TestCase):
         self.assertEqual(len(self.state()['years']),2);self.assertEqual(self.state()['years'][1]['processed_utc'],status['updated_utc'])
 
 if __name__=='__main__':unittest.main()
+
+class DownloadRetryTest(unittest.TestCase):
+ def response(self):
+  response=mock.MagicMock();response.__enter__.return_value.read.return_value=zip_fixture(2022);return response
+ def test_transient_then_success(self):
+  err=mod.urllib.error.HTTPError('https://portal.inmet.gov.br',503,'temporary',{},None)
+  with mock.patch.object(mod.urllib.request,'urlopen',side_effect=[err,self.response()]) as op, mock.patch.object(mod.time,'sleep') as sleep:
+   self.assertTrue(mod.download(2022));self.assertEqual(op.call_count,2);sleep.assert_called_once_with(10)
+ def test_definitive_no_retry(self):
+  err=mod.urllib.error.HTTPError('https://portal.inmet.gov.br',404,'missing',{},None)
+  with mock.patch.object(mod.urllib.request,'urlopen',side_effect=err) as op, mock.patch.object(mod.time,'sleep') as sleep:
+   with self.assertRaises(mod.urllib.error.HTTPError):mod.download(2022)
+   self.assertEqual(op.call_count,1);sleep.assert_not_called()
+ def test_timeout_stops_after_two(self):
+  with mock.patch.object(mod.urllib.request,'urlopen',side_effect=TimeoutError()) as op, mock.patch.object(mod.time,'sleep') as sleep:
+   with self.assertRaises(TimeoutError):mod.download(2022)
+   self.assertEqual(op.call_count,2);sleep.assert_called_once_with(10)
+ def test_invalid_zip_no_retry(self):
+  response=self.response();response.__enter__.return_value.read.return_value=b'not zip'
+  with mock.patch.object(mod.urllib.request,'urlopen',return_value=response) as op, mock.patch.object(mod.time,'sleep') as sleep:
+   with self.assertRaises(RuntimeError):mod.download(2022)
+   self.assertEqual(op.call_count,1);sleep.assert_not_called()

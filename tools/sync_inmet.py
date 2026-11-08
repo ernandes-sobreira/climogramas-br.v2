@@ -14,6 +14,8 @@ import math
 import pathlib
 import re
 import urllib.request
+import urllib.error
+import time
 import zipfile
 import copy
 import os
@@ -38,8 +40,20 @@ CODE_RE = re.compile(r"^[A-Z]\d{3,4}$")
 
 def download(year):
     req = urllib.request.Request(URL.format(year=year), headers={"User-Agent":"ClimogramasBR-UNEMAT/1.0 (public academic analysis)"})
-    with urllib.request.urlopen(req, timeout=180) as response:
-        data = response.read(320_000_001)
+    for attempt in range(2):
+        try:
+            with urllib.request.urlopen(req, timeout=180) as response:
+                data = response.read(320_000_001)
+            break
+        except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError) as exc:
+            transient = (
+                isinstance(exc, urllib.error.HTTPError) and exc.code in (429,502,503,504)
+                or isinstance(exc, TimeoutError)
+                or isinstance(exc, urllib.error.URLError) and isinstance(exc.reason, TimeoutError)
+            )
+            if not transient or attempt == 1:
+                raise
+            time.sleep(10)
     if len(data)>320_000_000 or not zipfile.is_zipfile(io.BytesIO(data)):
         raise RuntimeError(f"Pacote {year} inválido ou excessivamente grande")
     return data
