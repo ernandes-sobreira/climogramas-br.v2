@@ -43,6 +43,7 @@
   function setMsg(text, kind="ok"){
     const box = $("msgBox");
     box.textContent = text;
+    if (chartLoading && kind === "err") loadingError = text;
     box.style.borderColor = (kind==="err") ? "rgba(251,113,133,.35)" : "rgba(36,91,114,.15)";
     box.style.background = (kind==="err") ? "rgba(251,113,133,.10)" : "#f4fafb";
     box.style.color = (kind==="err") ? "#a12e35" : "#567484";
@@ -385,7 +386,7 @@
     if(version===stationSelectionVersion)setMsg("Não foi possível carregar as variáveis desta estação. Tente Gerar ou selecione outra estação.","err");
   }
   function selectStation(code, zoom=true){
-    if(anaBusy)return;
+    if(anaBusy||chartLoading)return;
     if(isAna()){stationSelectionVersion++;return selectAnaStation(code,zoom);}
     selectedStation = stations.find(s=>s.code===code) || null;
     const selectionVersion=++stationSelectionVersion;
@@ -607,7 +608,52 @@
     heatLegendBar.style.background = "linear-gradient(90deg, rgba(35,23,140,.95), rgba(0,140,255,.95), rgba(0,220,190,.95), rgba(255,230,80,.95), rgba(255,120,40,.95), rgba(255,50,90,.95))";
   }
 
+  // Keep feedback inside the chart AND in the mobile viewport, not only above the fold.
+  let chartLoading = false, loadingError = '', loadingTimer = null;
+  function loadingUi(){
+    if($('chartLoading'))return;
+    const style=document.createElement('style');
+    style.textContent=`#chartLoading[hidden],#loadingToast[hidden]{display:none!important}
+      #chartLoading{position:absolute;inset:12px;z-index:5;display:flex;align-items:center;justify-content:center;background:rgba(244,250,251,.96);border:1px solid #b7d5df;border-radius:14px;color:#163f52;padding:20px;text-align:center}
+      #chartLoading strong{display:block;font-size:19px;margin-bottom:10px}#chartLoading p{max-width:440px;margin:8px auto;line-height:1.5}
+      #loadingToast{position:fixed;bottom:calc(14px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);z-index:1200;width:min(520px,calc(100% - 28px));box-sizing:border-box;background:#123f50;color:#fff;padding:13px 18px;border-radius:12px;box-shadow:0 4px 18px #0003;font:600 14px/1.45 Arial,sans-serif;pointer-events:none}
+      .loadingDot{display:inline-block;width:22px;height:22px;border:3px solid #b7d5df;border-top-color:#087f8c;border-radius:50%;animation:climSpin 1s linear infinite;margin-bottom:8px}@keyframes climSpin{to{transform:rotate(360deg)}}
+      @media(prefers-reduced-motion:reduce){.loadingDot{animation:none}}`;
+    document.head.appendChild(style);
+    const panel=document.createElement('div');panel.id='chartLoading';panel.hidden=true;panel.setAttribute('role','status');panel.setAttribute('aria-live','polite');
+    panel.innerHTML='<div><span class="loadingDot" aria-hidden="true"></span><strong id="loadingTitle">Carregando dados…</strong><p id="loadingDetail"></p><p id="loadingElapsed"></p></div>';
+    document.querySelector('.chartWrap').appendChild(panel);
+    const toast=document.createElement('div');toast.id='loadingToast';toast.hidden=true;toast.setAttribute('aria-hidden','true');document.body.appendChild(toast);
+  }
   async function run(){
+    if(chartLoading||anaBusy)return;
+    loadingUi();chartLoading=true;loadingError='';
+    const label={clim:'gráfico mensal',annual:'gráfico anual',heatmap:'mapa de calor',rel:'correlação entre variáveis'}[mode]||'gráfico';
+    const title=isRecent()?'Carregando leituras recentes…':`Preparando ${label}…`;
+    $('loadingTitle').textContent=title;
+    $('loadingDetail').textContent='A consulta e o cálculo podem levar alguns segundos ou minutos, conforme o período e a resposta da fonte. Aguarde: o gráfico ainda está sendo preparado.';
+    $('loadingElapsed').textContent='';$('chartLoading').hidden=false;$('loadingToast').hidden=false;
+    $('loadingToast').textContent=title+' Aguarde; períodos longos podem levar alguns minutos.';
+    $('mainChart').setAttribute('aria-busy','true');
+    const started=Date.now();
+    loadingTimer=setInterval(()=>{const elapsed=Math.floor((Date.now()-started)/1000);$('loadingElapsed').textContent=`Tempo decorrido: ${elapsed}s. ${elapsed>=15?'Ainda consultando ou processando os dados.':''}`;},1000);
+    const controls=[btnRun,btnPng,btnCsv,sourceSelect,ufSelect,stationSelect,searchStation,yearStart,yearEnd,var1,var2,anaType,anaConsistency,btnReset,...document.querySelectorAll('.modeBtn')];
+    const disabled=controls.map(el=>el.disabled);controls.forEach(el=>el.disabled=true);
+    const runLabel=btnRun.textContent;btnRun.textContent='Carregando…';
+    try{
+      // Yield before any cached-data calculation, so the loading state gets painted.
+      await new Promise(resolve=>setTimeout(resolve,40));
+      await performRun();
+    }catch(e){setMsg(`Falha ao preparar gráfico: ${e.message||e}`,'err');}
+    finally{
+      clearInterval(loadingTimer);loadingTimer=null;chartLoading=false;
+      $('mainChart').setAttribute('aria-busy','false');$('chartLoading').hidden=true;$('loadingToast').hidden=true;
+      controls.forEach((el,i)=>el.disabled=disabled[i]);btnRun.textContent=runLabel;
+      if(loadingError){chartMeta.textContent=loadingError+' O resultado anterior, se houver, não foi atualizado.';}
+    }
+  }
+
+  async function performRun(){
     if(isAna())return runAna();
     try{
       if (!selectedStation){ setMsg("Selecione uma estação.", "err"); return; }
@@ -1295,7 +1341,8 @@
 
   window.addEventListener('climogramas-data-updated',async()=>{
     if(document.visibilityState!=='visible'||anaBusy||!selectedStation||!lastRows.length)return;
-    if(isAna())runAna();else{
+    if(chartLoading)return;
+    if(isAna())run();else{
       const epoch=sourceEpoch,selectionVersion=stationSelectionVersion,code=selectedStation.code,uf=ufSelect.value;
       try{
         const raw=await fetchJson(new URL('stations.json',ASSETS).toString());
@@ -1319,4 +1366,5 @@
   anaType.addEventListener("change",()=>{searchStation.value="";loadAnaCatalog();});
   sourceSelect.disabled=true;init().finally(()=>{sourceSelect.disabled=false;});
 })();
+
 
