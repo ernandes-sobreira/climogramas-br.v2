@@ -17,13 +17,17 @@ function covered(ranges,start,end){
 async function summary(args){
  const {type,station,start,end,consistency='2'}=args;
  const compact=window.AnaCompact?await window.AnaCompact.read(args):null;
- const b=(compact&&covered(compact.checked_ranges,start,end)?compact:null)||await read(`summaries/${type}/${station}/nivel${consistency}.json`);
- if(b?.schema_version!==1||String(b.station)!==station||b.variable!==type||String(b.consistency)!==String(consistency)||!Array.isArray(b.months)||!Array.isArray(b.years)||!covered(b.checked_ranges,start,end))return null;
+ let b=(compact&&covered(compact.checked_ranges,start,end)?compact:null)||await read(`summaries/${type}/${station}/nivel${consistency}.json`);
+ if(!b||!covered(b.checked_ranges,start,end)){
+  const api=compact||b;
+  if(window.AnaImported)b=await window.AnaImported.merge(api,args);
+ }
+ if(b?.schema_version!==1||String(b.station)!==station||b.variable!==type||String(b.consistency)!==String(consistency)||!Array.isArray(b.months)||!Array.isArray(b.years)||(!covered(b.checked_ranges,start,end)&&b.imported_requested_coverage!==true))return null;
  const y0=+start.slice(0,4),y1=+end.slice(0,4);
  const months=b.months.filter(x=>x.ano>=y0&&x.ano<=y1),years=b.years.filter(x=>x.ano>=y0&&x.ano<=y1);
  const climatology=Array.from({length:12},(_,i)=>{const rows=months.filter(x=>x.mes===i+1&&x.completo&&Number.isFinite(x.valor));return{mes:i+1,valor:rows.length?rows.reduce((n,x)=>n+x.valor,0)/rows.length:null,anos_completos:rows.length};});
  const result=[];result.precomputed={spec:ANAMain.specs[type],months,years,climatology,lastDate:months.map(x=>x.last_date).filter(Boolean).sort().at(-1)||null};
- result.persistence={snapshots:years.length,summary:true,last_success_utc:b.last_success_utc,stale:!!b.stale};result.failedYears=[];
+ result.persistence={snapshots:years.length,summary:true,imported_months:b.imported_months||0,imported_provenance:b.imported_provenance||null,last_success_utc:b.last_success_utc,stale:!!b.stale};result.failedYears=[];
  return result;
 }
 class AnaPersistentApi extends AnaPublicApi{
