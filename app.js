@@ -1278,6 +1278,22 @@
     if(end>=1850&&end<currentYear)return end;
     return start>=currentYear&&start<=currentYear?currentYear:currentYear-1;
   }
+  async function suggestObservedAnaYear(station){
+    if(!station||isRecent()||yearStart.dataset.anaSet==='user')return;
+    const epoch=sourceEpoch,version=stationSelectionVersion,type=anaType.value,level=anaConsistency.value;
+    const suffix=' Ano sugerido apenas para consulta; a existência de observações nesse ano ainda não foi confirmada.';
+    const ended=Number(String(station.end||'').match(/^\d{4}/)?.[0]);
+    if(!(ended>=1850&&ended<new Date().getFullYear()))stationMeta.textContent+=suffix;
+    let latest=null;try{latest=await AnaPersistentApi.lastObservation({station:station.code,type,consistency:level});}catch{return;}
+    if(!isAna()||isRecent()||sourceEpoch!==epoch||stationSelectionVersion!==version||selectedStation?.code!==station.code||anaType.value!==type||anaConsistency.value!==level||yearStart.dataset.anaSet==='user')return;
+    if(!latest)return;
+    stationMeta.textContent=stationMeta.textContent.replace(suffix,'');
+    const year=Number(latest.date.slice(0,4));
+    stationMeta.textContent+=` Última observação no acervo deste nível: ${latest.date}. Não é data de encerramento cadastral nem garantia de medição atual.${latest.stale?' Acervo preservado após falha/revisão.':''}`;
+    if(chartLoading||anaBusy)return; // Never change filters under an in-flight chart.
+    yearStart.value=String(year);yearEnd.value=String(year);yearStart.dataset.anaSet='observed';
+    updatePills({station:station.code,years:`${year}–${year}`,data:'ANA · último ano observado no acervo'});
+  }
   function selectAnaStation(code,zoom){
     selectedStation=stations.find(s=>s.code===code)||null;
     stationMeta.textContent=selectedStation?`${selectedStation.code} · ${selectedStation.name} · ${selectedStation.uf} · cadastro desde ${selectedStation.start||'data não informada'} · lat ${selectedStation.lat}, lon ${selectedStation.lon}. Postos com nomes semelhantes são séries diferentes.`:'—';
@@ -1298,6 +1314,7 @@
     fillSelect(var1,[anaType.value],()=>ANAMain.specs[anaType.value].label,x=>x,false);var1.disabled=true;var2.disabled=true;
     if(isRecent()){yearStart.disabled=true;yearEnd.disabled=true;}
     updatePills({station:code,years:`${yearStart.value}–${yearEnd.value}`,data:'ANA · consulta sob demanda'});
+    suggestObservedAnaYear(selectedStation);
     if(selectedStation&&map&&Number.isFinite(selectedStation.lat)&&Number.isFinite(selectedStation.lon))map.setView([selectedStation.lat,selectedStation.lon],7);
   }
   async function runAna(){
@@ -1383,10 +1400,12 @@
   $('cancelAna').addEventListener('click',()=>{anaCancelled=true;$('cancelAna').disabled=true;chartMeta.textContent='Cancelando após a requisição atual; nenhuma nova consulta será iniciada.';});
 
   for(const control of [yearStart,yearEnd])control.addEventListener('change',()=>{if(isAna())yearStart.dataset.anaSet='user';});
+  anaConsistency.addEventListener('change',()=>{if(isAna()&&selectedStation)selectAnaStation(selectedStation.code,false);});
   sourceSelect.addEventListener("change",activateSource);
   anaType.addEventListener("change",()=>{searchStation.value="";loadAnaCatalog();});
   sourceSelect.disabled=true;init().finally(()=>{sourceSelect.disabled=false;});
 })();
+
 
 
 

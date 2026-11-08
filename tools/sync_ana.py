@@ -35,8 +35,13 @@ def parse_inventory(xml,uf):
     if not out: raise ValueError('empty_or_unrecognized_inventory')
     return sorted(out.values(),key=lambda x:int(x['code']))
 def parse_series(xml,station,kind,year):
+    return parse_series_rows(rows(xml,'SerieHistorica'),station,kind,year)
+
+def parse_series_rows(records,station,kind,year):
+    # Pure parser for already-validated records: permits one XML parse per response.
+    # Public callers accepting raw XML must keep using parse_series/rows first.
     _,prefix,unit=TYPES[kind]; bykey={}; matched=0
-    for r in rows(xml,'SerieHistorica'):
+    for r in records:
         if r.get('EstacaoCodigo','').strip()!=station: continue
         level=r.get('NivelConsistencia','').strip()
         if level not in ('1','2'): continue
@@ -258,3 +263,4 @@ def main():
     if not 10<=args.max_cache_mib<=500 or not 0<=args.catalog_budget<=27 or not 0<=args.series_budget<=100 or not 1<=args.max_seconds<=1800 or not 1<=len(args.years)<=2 or any(y<1850 or y>dt.date.today().year for y in args.years):p.error('unsafe_budget_or_years')
     run(args)
 if __name__=='__main__':main()
+

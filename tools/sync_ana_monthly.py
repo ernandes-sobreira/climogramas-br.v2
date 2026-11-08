@@ -3,7 +3,7 @@
 Independent outputs: never modifies the original catalog or daily snapshots.
 """
 import argparse, calendar, datetime as dt, hashlib, json, pathlib, time, socket, math, unicodedata
-from sync_ana import TYPES, STATES, fetch, parse_series, read, write, utcnow
+from sync_ana import TYPES, STATES, fetch, rows, parse_series_rows, read, write, utcnow
 from ana_summary_codec import encode, decode, write_bytes, scientifically_equal
 
 PERIODS={'chuva':'PeriodoPluviometro','cotas':'PeriodoEscala','vazao':'PeriodoDescLiquida'}
@@ -185,7 +185,8 @@ def run(args, request=fetch, today=None):
         try:
             params={'codEstacao':task['code'],'dataInicio':f"01/01/{task['start']}",'dataFim':f"31/12/{task['end']}",'tipoDados':TYPES[task['kind']][0],'nivelConsistencia':task['level']}
             xml=request('HidroSerieHistorica',params,timeout=60,limit=8*1024*1024)
-            parsed={year:parse_series(xml,task['code'],task['kind'],year) for year in range(task['start'],task['end']+1)}
+            response_rows=rows(xml,'SerieHistorica')
+            parsed={year:parse_series_rows(response_rows,task['code'],task['kind'],year) for year in range(task['start'],task['end']+1)}
             returned={r['consistency'] for data in parsed.values() for r in data['observations']}
             # Empty requested level is confirmed empty. An unreturned OTHER level
             # is not inferred empty and retains its own independent probe.

@@ -89,8 +89,17 @@ class AnaPersistentApi extends AnaPublicApi{
   return result;
  }
 }
+AnaPersistentApi.lastObservation=async function(args){
+ const current=new Date().getFullYear(),query={...args,start:'1850-01-01',end:`${current}-12-31`};
+ const compact=window.AnaCompact?await window.AnaCompact.read(query):null;
+ const b=compact||await read(`summaries/${args.type}/${args.station}/nivel${args.consistency}.json`);
+ if(!b||String(b.station)!==args.station||b.variable!==args.type||String(b.consistency)!==String(args.consistency))return null;
+ const dates=(b.months||[]).filter(x=>x.dias>0&&/^\d{4}-\d{2}-\d{2}$/.test(x.last_date||'')).map(x=>x.last_date).sort();
+ return dates.length?{date:dates.at(-1),source:'acervo de observações',stale:!!b.stale}:null;
+};
 AnaPersistentApi.clearCache=()=>seriesCache.clear();
 window.AnaPersistentApi=AnaPersistentApi;
 window.AnaAutomationStatus={read:()=>read('status.json')};
 })();
+
 
