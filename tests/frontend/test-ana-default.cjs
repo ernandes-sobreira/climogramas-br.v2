@@ -4,3 +4,5 @@ require("./test-ana-observed.cjs");
 
 require("../test-imported.cjs");
 require("./test-imported-integration.cjs");
+
+require("./test-confirmed-meta.cjs");

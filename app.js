@@ -1317,6 +1317,10 @@
     suggestObservedAnaYear(selectedStation);
     if(selectedStation&&map&&Number.isFinite(selectedStation.lat)&&Number.isFinite(selectedStation.lon))map.setView([selectedStation.lat,selectedStation.lon],7);
   }
+  function confirmedAnaMeta(text,years){
+    if(!Array.isArray(years)||!years.some(y=>Number.isFinite(y.dias)&&y.dias>0))return text;
+    return text.split(' Ano sugerido apenas para consulta; a existência de observações nesse ano ainda não foi confirmada.').join('');
+  }
   async function runAna(){
     if(isRecent())return runRecent();
     if(anaBusy)return;if(!selectedStation)return setMsg('Selecione uma estação ANA.','err');
@@ -1344,6 +1348,7 @@
         options={...options,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.raw.x} ${monthName(c.raw.y)}: ${Number.isFinite(c.raw.v)?fmt(c.raw.v)+' '+unit:'mês incompleto/sem dado'}`}}},scales:{x:{type:'linear',min:y0-.5,max:y1+.5,ticks:{stepSize:1,callback:v=>Number.isInteger(v)?String(v):''},title:{display:true,text:'Ano'}},y:{min:1,max:12,ticks:{stepSize:1,callback:monthName}}}};
       }
       renderChart({data:{labels,datasets},options});tableSet(rows,null,2);renderedNew=true;
+      stationMeta.textContent=confirmedAnaMeta(stationMeta.textContent,a.years);
       chartTitle.textContent=`${selectedMode==='clim'?'Climograma mensal':selectedMode==='annual'?'Série anual':'Mapa mensal'} — ${a.spec.label} · ${stationLabel(station)}`;
       chartMeta.textContent=`ANA pública · ${level==='1'?'BRUTO/PRELIMINAR':'CONSISTIDO'} · ${y0}–${y1} · última observação ${a.lastDate} · ${points.persistence?.summary?"resumo pré-calculado · ":""}${points.persistence?.imported_months?"histórico importado HidroWeb: "+points.persistence.imported_months+" mês(es); API tem prioridade · arquivo histórico, não confirmação de atualização atual":points.persistence?.snapshots?"acervo automático: "+points.persistence.snapshots+" ano(s)":"consulta direta"}${points.persistence?.stale?' · CACHE PRESERVADO: última consulta falhou ou não confirmou dados; confira a data da medição':''}${points.failedYears?.length?' · FALHA DE CONSULTA nos anos '+points.failedYears.join(', ')+': resultado incompleto':''} · última coleta não equivale à última medição`;
       updatePills({station:station.code,years:`${y0}–${y1}`,data:`ANA · nível${level} · ${points.precomputed?points.precomputed.years.reduce((n,y)=>n+y.dias,0):points.length} dias`});
