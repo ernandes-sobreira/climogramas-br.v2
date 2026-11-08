@@ -6,3 +6,6 @@ require("../test-imported.cjs");
 require("./test-imported-integration.cjs");
 
 require("./test-confirmed-meta.cjs");
+
+require("./test-inmet-index.cjs");
+require("./test-inmet-coverage-note.cjs");

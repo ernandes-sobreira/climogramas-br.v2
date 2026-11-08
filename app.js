@@ -659,6 +659,12 @@
     }
   }
 
+  function inmetCoverageNote(packs){
+    const legacy=packs.filter(p=>!p.quality);
+    if(!legacy.length)return '';
+    const low=legacy.filter(p=>Number.isFinite(p.annual?.coverage)&&p.annual.coverage<0.9).map(p=>p.year);
+    return ' · Resumo legado: cobertura mensal por variável não auditada; totais podem ser parciais.'+(low.length?' Indicador de cobertura anual abaixo de 90% em '+low.join(', ')+'.':'');
+  }
   async function performRun(){
     if(isAna())return runAna();
     try{
@@ -686,6 +692,7 @@
         return;
       }
 
+      const inmetNote=inmetCoverageNote(packs);
       const yearsOk = packs.map(p=>p.year).sort((a,b)=>a-b);
       updatePills({station: code, years:`${yearsOk[0]}–${yearsOk[yearsOk.length-1]}`, data:`${yearsOk.length} ano(s)`});
 
@@ -776,7 +783,7 @@
         });
 
         chartTitle.textContent = `Climograma (média mensal) — ${stationLabel(selectedStation)}`;
-        chartMeta.textContent = `Anos usados: ${yearsOk[0]}–${yearsOk[yearsOk.length-1]} (ignorando meses nulos).`;
+        chartMeta.textContent = `Anos usados: ${yearsOk[0]}–${yearsOk[yearsOk.length-1]} (ignorando meses nulos).`+inmetNote;
 
         setKpis([
           {k:"Anos úteis", v:String(yearsOk.length)},
@@ -856,7 +863,7 @@
         });
 
         chartTitle.textContent = `Série anual — ${stationLabel(selectedStation)}`;
-        chartMeta.textContent = `Anos usados: ${labels[0]}–${labels[labels.length-1]} (por months).`;
+        chartMeta.textContent = `Anos usados: ${labels[0]}–${labels[labels.length-1]} (por months).`+inmetNote;
 
         setKpis([
           {k:"Anos úteis", v:String(rows.length)},
@@ -981,7 +988,7 @@
         });
 
         chartTitle.textContent = `Mensal por ano (heatmap) — ${stationLabel(selectedStation)}`;
-        chartMeta.textContent = `Var: ${labelOfVar(V1)} • anos úteis: ${yearsAxis[0]}–${yearsAxis[yearsAxis.length-1]}`;
+        chartMeta.textContent = `Var: ${labelOfVar(V1)} • anos úteis: ${yearsAxis[0]}–${yearsAxis[yearsAxis.length-1]}`+inmetNote;
 
         setKpis([
           {k:"Anos úteis", v:String(rows.length)},
@@ -1087,7 +1094,7 @@
         });
 
         chartTitle.textContent = `Relação entre variáveis — ${stationLabel(selectedStation)}`;
-        chartMeta.textContent = `Pontos: ${pts.length} (meses válidos no intervalo).`;
+        chartMeta.textContent = `Pontos: ${pts.length} (meses válidos no intervalo).`+inmetNote;
 
         setKpis([
           {k:"Pontos", v:String(pts.length)},
