@@ -101,6 +101,23 @@ def due_queue(all_tasks,state,today,now):
             if i<len(group):result.append(group[i])
     return result
 
+def archive_metrics(root):
+    # Count each station/variable/level once; compact takes precedence over legacy.
+    files={}
+    for folder,pattern in (('summaries','*.json'),('compact','*.json.gz')):
+        for p in (root/folder).rglob(pattern):
+            relative=str(p.relative_to(root/folder)).removesuffix('.gz')
+            files[relative]=p
+    useful=set();series=0;observations=0;errors=0
+    for path in files.values():
+        try:
+            data=decode(path.read_bytes()) if path.suffix=='.gz' else read(path,{})
+            n=sum(row.get('dias',0) for row in data.get('years',[]))
+            if n:
+                useful.add(str(data['station']));series+=1;observations+=n
+        except Exception:errors+=1
+    return dict(archive_series=len(files),archive_useful_series=series,archive_useful_stations=len(useful),aggregate_valid_day_records=observations,metrics_read_errors=errors)
+
 def run(args, request=fetch, today=None):
     today=today or dt.date.today(); root=pathlib.Path(args.root);statepath=root/'monthly-state.json'
     state=read(statepath,{'tasks':{},'schema_version':1});write(statepath,state);catalogs={uf:read(root/'catalog'/f'{uf}.json',{}).get('stations',[]) for uf in STATES}
@@ -152,6 +169,7 @@ def run(args, request=fetch, today=None):
         state['tasks'][k]=record;write(statepath,state)
         if args.delay:time.sleep(args.delay)
     status=dict(schema_version=1,last_run_utc=now,requests_this_run=attempted,success_this_run=success,catalog_ufs=sum(bool(s) for s in catalogs.values()),tasks_total=len(all_tasks),tasks_completed=sum(bool(state['tasks'].get(key(t),{}).get('last_success_utc')) for t in all_tasks),storage_limited=limited,unknown_start_tasks=sum(t.get('historical_start_unknown',False) for t in all_tasks),national_series_complete=False,warning='Staged national bootstrap including inactive stations. Successful empty queries do not imply observations exist. Monthly revisions; no guarantee all stations are current.')
+    status.update(archive_metrics(root))
     write(root/'monthly-status.json',status);return status
 
 def main():

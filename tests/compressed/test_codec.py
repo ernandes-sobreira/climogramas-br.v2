@@ -56,4 +56,12 @@ class CodecTests(unittest.TestCase):
                 state=pipeline.read(root/'monthly-state.json',{})
                 self.assertTrue(any(r.get('last_success_utc','').startswith('2026-12') for r in state['tasks'].values()))
             finally:pipeline.utcnow=original
+    def test_metrics_deduplicate_legacy_and_compact(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=pathlib.Path(tmp);source=summary()
+            pipeline.write(root/'summaries/chuva/1657000/nivel1.json',source)
+            target=root/'compact/chuva/1657000/nivel1.json.gz';target.parent.mkdir(parents=True);target.write_bytes(encode(source))
+            result=pipeline.archive_metrics(root)
+            self.assertEqual(result['archive_series'],1);self.assertEqual(result['archive_useful_stations'],1)
+            self.assertEqual(result['aggregate_valid_day_records'],59)
 if __name__=='__main__':unittest.main()
