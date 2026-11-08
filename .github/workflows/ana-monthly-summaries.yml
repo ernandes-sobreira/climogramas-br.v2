@@ -1,3 +1,4 @@
+# Extra bounded batch requested by owner after successful first batch, 2026-11-08.
 name: ANA resumos mensais e carga histórica por etapas
 on:
   push:
