@@ -1,6 +1,17 @@
 {
-  "updated_utc": "2026-11-20T19:10:10.854202+00:00",
+  "updated_utc": "2026-11-21T18:06:12.874088+00:00",
   "years": [
+    {
+      "year": 2010,
+      "processed_utc": "2026-11-21T18:06:12.874088+00:00",
+      "last_success_utc": "2026-11-21T18:06:12.874088+00:00",
+      "checked_utc": "2026-11-21T18:06:12.874088+00:00",
+      "stations": 446,
+      "skipped_files": 0,
+      "source_sha256": "a665f207d0c95bcbf352fe6c91a52f8466ac12220a4f354c23e6a7835a8bac58",
+      "status": "updated",
+      "last_check_ok": true
+    },
     {
       "year": 2011,
       "processed_utc": "2026-11-20T19:10:10.854202+00:00",
@@ -172,13 +183,13 @@
       "skipped_files": 0,
       "source_sha256": "e50640dee9556273fcdf02874fc88518c5a82a377e3780eb0fcdf202cb9006fd",
       "processed_utc": "2026-11-06T18:09:32.114103+00:00",
-      "last_success_utc": "2026-11-20T19:13:00.806667+00:00",
-      "checked_utc": "2026-11-20T19:13:00.806667+00:00",
+      "last_success_utc": "2026-11-21T18:09:07.659371+00:00",
+      "checked_utc": "2026-11-21T18:09:07.659371+00:00",
       "status": "unchanged",
       "last_check_ok": true
     }
   ],
-  "checked_utc": "2026-11-20T19:13:44.021700+00:00",
-  "last_success_utc": "2026-11-20T19:13:00.806667+00:00",
+  "checked_utc": "2026-11-21T18:10:02.261417+00:00",
+  "last_success_utc": "2026-11-21T18:09:07.659371+00:00",
   "status": "ok"
 }
