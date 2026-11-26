@@ -1,6 +1,17 @@
 {
-  "updated_utc": "2026-11-25T20:31:36.344549+00:00",
+  "updated_utc": "2026-11-26T20:19:20.518652+00:00",
   "years": [
+    {
+      "year": 2005,
+      "processed_utc": "2026-11-26T20:19:20.518652+00:00",
+      "last_success_utc": "2026-11-26T20:19:20.518652+00:00",
+      "checked_utc": "2026-11-26T20:19:20.518652+00:00",
+      "stations": 64,
+      "skipped_files": 0,
+      "source_sha256": "29eada49298b71bb19912bf7adef28595b38775b2bb03d11d26bf0884bd7d854",
+      "status": "updated",
+      "last_check_ok": true
+    },
     {
       "year": 2006,
       "processed_utc": "2026-11-25T20:31:36.344549+00:00",
@@ -228,12 +239,13 @@
       "source_sha256": "e50640dee9556273fcdf02874fc88518c5a82a377e3780eb0fcdf202cb9006fd",
       "processed_utc": "2026-11-06T18:09:32.114103+00:00",
       "last_success_utc": "2026-11-25T20:32:19.131062+00:00",
-      "checked_utc": "2026-11-25T20:32:19.131062+00:00",
-      "status": "unchanged",
-      "last_check_ok": true
+      "checked_utc": "2026-11-26T20:19:38.695370+00:00",
+      "status": "error",
+      "last_check_ok": false,
+      "error": "RuntimeError"
     }
   ],
-  "checked_utc": "2026-11-25T20:33:13.274236+00:00",
-  "last_success_utc": "2026-11-25T20:32:19.131062+00:00",
-  "status": "ok"
+  "checked_utc": "2026-11-26T20:19:44.582504+00:00",
+  "last_success_utc": "2026-11-26T20:19:20.518652+00:00",
+  "status": "error"
 }
