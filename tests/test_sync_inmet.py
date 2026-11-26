@@ -97,3 +97,10 @@ class DownloadRetryTest(unittest.TestCase):
   with mock.patch.object(mod.urllib.request,'urlopen',return_value=response) as op, mock.patch.object(mod.time,'sleep') as sleep:
    with self.assertRaises(RuntimeError):mod.download(2022)
    self.assertEqual(op.call_count,1);sleep.assert_not_called()
+
+class LegacyPrecipitationGuardTest(unittest.TestCase):
+    def test_missing_published_zero_and_annual_total_are_regressions(self):
+        previous = {"months": [{"m": 7, "p": 0}], "annual": {"p_total": 42}}
+        candidate = {"months": [{"m": 7, "p": None}], "annual": {"p_total": None}}
+        self.assertEqual(len(mod.regression_reasons(previous, candidate)), 2)
+        self.assertEqual(mod.regression_reasons(previous, previous), [])

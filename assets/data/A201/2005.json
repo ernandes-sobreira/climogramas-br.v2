@@ -1,1 +1,75 @@
-{"meta":{"id":"A201","name":null,"uf":";PA","region":null,"lat":-1.41027777,"lon":-48.43833333,"alt":24.0,"source":"INMET"},"year":2005,"months":[{"m":1,"prec_mm":null,"tmean_c":26.622297297297298,"tmin_c":22.6,"tmax_c":33.3,"tmean":26.622297297297298,"tmin":22.6,"tmax":33.3,"p":null},{"m":2,"prec_mm":null,"tmean_c":26.195238095238093,"tmin_c":22.6,"tmax_c":33.2,"tmean":26.195238095238093,"tmin":22.6,"tmax":33.2,"p":null},{"m":3,"prec_mm":null,"tmean_c":26.16869918699187,"tmin_c":23.1,"tmax_c":33.0,"tmean":26.16869918699187,"tmin":23.1,"tmax":33.0,"p":null},{"m":4,"prec_mm":null,"tmean_c":26.10156028368794,"tmin_c":22.7,"tmax_c":32.8,"tmean":26.10156028368794,"tmin":22.7,"tmax":32.8,"p":null},{"m":5,"prec_mm":null,"tmean_c":27.808260869565217,"tmin_c":22.9,"tmax_c":32.3,"tmean":null,"tmin":null,"tmax":null,"p":null},{"m":6,"prec_mm":null,"tmean_c":27.635211267605634,"tmin_c":23.7,"tmax_c":32.1,"tmean":null,"tmin":null,"tmax":null,"p":null},{"m":7,"prec_mm":null,"tmean_c":28.25241935483871,"tmin_c":23.1,"tmax_c":33.0,"tmean":null,"tmin":null,"tmax":null,"p":null},{"m":8,"prec_mm":null,"tmean_c":28.500904977375566,"tmin_c":22.7,"tmax_c":34.2,"tmean":null,"tmin":null,"tmax":null,"p":null},{"m":9,"prec_mm":null,"tmean_c":27.149619482496195,"tmin_c":22.6,"tmax_c":33.9,"tmean":27.149619482496195,"tmin":22.6,"tmax":33.9,"p":null},{"m":10,"prec_mm":null,"tmean_c":27.3056657223796,"tmin_c":22.6,"tmax_c":34.0,"tmean":27.3056657223796,"tmin":22.6,"tmax":34.0,"p":null},{"m":11,"prec_mm":null,"tmean_c":27.534683954619126,"tmin_c":22.9,"tmax_c":34.0,"tmean":null,"tmin":null,"tmax":null,"p":null},{"m":12,"prec_mm":null,"tmean_c":26.750991501416433,"tmin_c":21.7,"tmax_c":41.5,"tmean":26.750991501416433,"tmin":21.7,"tmax":41.5,"p":null}],"annual":{"prec_total_mm":null,"tmean_c":26.942082629396406,"tmin_c":21.7,"tmax_c":41.5,"tmean":26.942082629396406,"p_total":null,"coverage":0.583},"vars":{"rh":{"months":[82.9554054054054,85.94009216589862,86.48373983739837,86.84964539007092,79.43913043478261,77.16901408450704,72.47983870967742,71.1945701357466,76.69406392694064,76.93342776203966,77.37277147487845,84.04729729729729]},"press":{"months":[1007.517027027027,1007.3430107526882,1009.1224932249323,1008.751914893617,1008.4034782608695,1008.3154929577464,1010.308064516129,1009.6771493212669,1009.7866057838661,1008.6091038406827,1007.002302631579,1006.9737837837838]},"rad":{"months":[13527.2775,11759.561604584527,11778.369829683697,11735.342925659472,12731.787037037036,9061.476923076923,17598.72619047619,18036.3322147651,15619.669565217391,15723.097493036212,15357.223642172525,12817.843434343435]},"wind":{"months":[1.0725675675675677,0.8764976958525346,0.8739837398373984,0.7602836879432624,1.1482608695652174,0.8225352112676056,1.180241935483871,1.4187782805429865,1.3680365296803652,1.2980169971671387,1.3448946515397082,1.0197297297297299]}},"quality":{"status":"archive","monthly_hourly_coverage":{"1":{"temp":{"valid_hours":740,"expected_hours":744,"coverage_pct":99.5},"prec":{"valid_hours":0,"expected_hours":744,"coverage_pct":0.0},"rh":{"valid_hours":740,"expected_hours":744,"coverage_pct":99.5},"press":{"valid_hours":740,"expected_hours":744,"coverage_pct":99.5},"rad":{"valid_hours":400,"expected_hours":744,"coverage_pct":53.8},"wind":{"valid_hours":740,"expected_hours":744,"coverage_pct":99.5}},"2":{"temp":{"valid_hours":651,"expected_hours":672,"coverage_pct":96.9},"prec":{"valid_hours":0,"expected_hours":672,"coverage_pct":0.0},"rh":{"valid_hours":651,"expected_hours":672,"coverage_pct":96.9},"press":{"valid_hours":651,"expected_hours":672,"coverage_pct":96.9},"rad":{"valid_hours":349,"expected_hours":672,"coverage_pct":51.9},"wind":{"valid_hours":651,"expected_hours":672,"coverage_pct":96.9}},"3":{"temp":{"valid_hours":738,"expected_hours":744,"coverage_pct":99.2},"prec":{"valid_hours":0,"expected_hours":744,"coverage_pct":0.0},"rh":{"valid_hours":738,"expected_hours":744,"coverage_pct":99.2},"press":{"valid_hours":738,"expected_hours":744,"coverage_pct":99.2},"rad":{"valid_hours":411,"expected_hours":744,"coverage_pct":55.2},"wind":{"valid_hours":738,"expected_hours":744,"coverage_pct":99.2}},"4":{"temp":{"valid_hours":705,"expected_hours":720,"coverage_pct":97.9},"prec":{"valid_hours":0,"expected_hours":720,"coverage_pct":0.0},"rh":{"valid_hours":705,"expected_hours":720,"coverage_pct":97.9},"press":{"valid_hours":705,"expected_hours":720,"coverage_pct":97.9},"rad":{"valid_hours":417,"expected_hours":720,"coverage_pct":57.9},"wind":{"valid_hours":705,"expected_hours":720,"coverage_pct":97.9}},"5":{"temp":{"valid_hours":230,"expected_hours":744,"coverage_pct":30.9},"prec":{"valid_hours":0,"expected_hours":744,"coverage_pct":0.0},"rh":{"valid_hours":230,"expected_hours":744,"coverage_pct":30.9},"press":{"valid_hours":230,"expected_hours":744,"coverage_pct":30.9},"rad":{"valid_hours":216,"expected_hours":744,"coverage_pct":29.0},"wind":{"valid_hours":230,"expected_hours":744,"coverage_pct":30.9}},"6":{"temp":{"valid_hours":71,"expected_hours":720,"coverage_pct":9.9},"prec":{"valid_hours":0,"expected_hours":720,"coverage_pct":0.0},"rh":{"valid_hours":71,"expected_hours":720,"coverage_pct":9.9},"press":{"valid_hours":71,"expected_hours":720,"coverage_pct":9.9},"rad":{"valid_hours":65,"expected_hours":720,"coverage_pct":9.0},"wind":{"valid_hours":71,"expected_hours":720,"coverage_pct":9.9}},"7":{"temp":{"valid_hours":248,"expected_hours":744,"coverage_pct":33.3},"prec":{"valid_hours":0,"expected_hours":744,"coverage_pct":0.0},"rh":{"valid_hours":248,"expected_hours":744,"coverage_pct":33.3},"press":{"valid_hours":248,"expected_hours":744,"coverage_pct":33.3},"rad":{"valid_hours":168,"expected_hours":744,"coverage_pct":22.6},"wind":{"valid_hours":248,"expected_hours":744,"coverage_pct":33.3}},"8":{"temp":{"valid_hours":442,"expected_hours":744,"coverage_pct":59.4},"prec":{"valid_hours":0,"expected_hours":744,"coverage_pct":0.0},"rh":{"valid_hours":442,"expected_hours":744,"coverage_pct":59.4},"press":{"valid_hours":442,"expected_hours":744,"coverage_pct":59.4},"rad":{"valid_hours":298,"expected_hours":744,"coverage_pct":40.1},"wind":{"valid_hours":442,"expected_hours":744,"coverage_pct":59.4}},"9":{"temp":{"valid_hours":657,"expected_hours":720,"coverage_pct":91.2},"prec":{"valid_hours":0,"expected_hours":720,"coverage_pct":0.0},"rh":{"valid_hours":657,"expected_hours":720,"coverage_pct":91.2},"press":{"valid_hours":657,"expected_hours":720,"coverage_pct":91.2},"rad":{"valid_hours":345,"expected_hours":720,"coverage_pct":47.9},"wind":{"valid_hours":657,"expected_hours":720,"coverage_pct":91.2}},"10":{"temp":{"valid_hours":706,"expected_hours":744,"coverage_pct":94.9},"prec":{"valid_hours":0,"expected_hours":744,"coverage_pct":0.0},"rh":{"valid_hours":706,"expected_hours":744,"coverage_pct":94.9},"press":{"valid_hours":703,"expected_hours":744,"coverage_pct":94.5},"rad":{"valid_hours":359,"expected_hours":744,"coverage_pct":48.3},"wind":{"valid_hours":706,"expected_hours":744,"coverage_pct":94.9}},"11":{"temp":{"valid_hours":617,"expected_hours":720,"coverage_pct":85.7},"prec":{"valid_hours":0,"expected_hours":720,"coverage_pct":0.0},"rh":{"valid_hours":617,"expected_hours":720,"coverage_pct":85.7},"press":{"valid_hours":608,"expected_hours":720,"coverage_pct":84.4},"rad":{"valid_hours":313,"expected_hours":720,"coverage_pct":43.5},"wind":{"valid_hours":617,"expected_hours":720,"coverage_pct":85.7}},"12":{"temp":{"valid_hours":706,"expected_hours":744,"coverage_pct":94.9},"prec":{"valid_hours":0,"expected_hours":744,"coverage_pct":0.0},"rh":{"valid_hours":740,"expected_hours":744,"coverage_pct":99.5},"press":{"valid_hours":740,"expected_hours":744,"coverage_pct":99.5},"rad":{"valid_hours":396,"expected_hours":744,"coverage_pct":53.2},"wind":{"valid_hours":740,"expected_hours":744,"coverage_pct":99.5}}},"coverage_as_of_utc":"2026-11-26T20:19:20.518652+00:00","note":"Cobertura calculada por horas observadas; totais de chuva com lacunas não representam totais completos."},"provenance":{"source":"https://portal.inmet.gov.br/uploads/dadoshistoricos/2005.zip","zip_sha256":"29eada49298b71bb19912bf7adef28595b38775b2bb03d11d26bf0884bd7d854","processed_utc":"2026-11-26T20:19:20.518652+00:00","last_observation_raw":"2005-12-31T23:00:00"}}
+{
+  "station": "A201",
+  "year": 2005,
+  "months": [
+    {
+      "m": 1,
+      "p": 359.8,
+      "tmean": 26.6
+    },
+    {
+      "m": 2,
+      "p": 440.0,
+      "tmean": 26.2
+    },
+    {
+      "m": 3,
+      "p": 490.0,
+      "tmean": 26.2
+    },
+    {
+      "m": 4,
+      "p": 62.4,
+      "tmean": 26.1
+    },
+    {
+      "m": 5,
+      "p": 213.2,
+      "tmean": 27.8
+    },
+    {
+      "m": 6,
+      "p": 26.4,
+      "tmean": 27.6
+    },
+    {
+      "m": 7,
+      "p": 19.4,
+      "tmean": 28.3
+    },
+    {
+      "m": 8,
+      "p": 67.4,
+      "tmean": 28.5
+    },
+    {
+      "m": 9,
+      "p": 137.8,
+      "tmean": 27.1
+    },
+    {
+      "m": 10,
+      "p": 221.0,
+      "tmean": 27.3
+    },
+    {
+      "m": 11,
+      "p": 141.6,
+      "tmean": 27.5
+    },
+    {
+      "m": 12,
+      "p": 494.6,
+      "tmean": 26.8
+    }
+  ],
+  "annual": {
+    "p_total": 2673.6,
+    "p_month_mean": 222.8,
+    "p_month_min": 19.4,
+    "p_month_max": 494.6,
+    "tmean": 27.2,
+    "tmin": 26.1,
+    "tmax": 28.5
+  }
+}

@@ -9,6 +9,7 @@ import datetime as dt
 import hashlib
 import importlib.util
 import io
+import math
 import json
 import math
 import pathlib
@@ -174,6 +175,17 @@ def regression_reasons(previous,candidate):
     old_last=previous.get("provenance",{}).get("last_observation_raw")
     new_last=candidate.get("provenance",{}).get("last_observation_raw")
     if old_last and new_last and new_last<old_last:reasons.append({"last_observation_regressed":True})
+    finite=lambda value: type(value) in (int,float) and math.isfinite(value)
+    old_months={m["m"]:m for m in previous.get("months",[]) if "m" in m}
+    new_months={m["m"]:m for m in candidate.get("months",[]) if "m" in m}
+    for month,old_month in old_months.items():
+        new_month=new_months.get(month,{})
+        if finite(old_month.get("p",old_month.get("prec_mm"))) and not finite(new_month.get("p",new_month.get("prec_mm"))):
+            reasons.append({"month":month,"variable":"prec","previous_numeric_lost":True})
+    old_annual=previous.get("annual",{})
+    new_annual=candidate.get("annual",{})
+    if finite(old_annual.get("p_total",old_annual.get("prec_total_mm"))) and not finite(new_annual.get("p_total",new_annual.get("prec_total_mm"))):
+        reasons.append({"variable":"prec","annual_total_lost":True})
     return reasons
 
 def utcnow():

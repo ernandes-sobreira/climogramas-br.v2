@@ -1,16 +1,16 @@
 {
-  "updated_utc": "2026-11-26T20:19:20.518652+00:00",
+  "updated_utc": "2026-11-25T20:31:36.344549+00:00",
   "years": [
     {
       "year": 2005,
-      "processed_utc": "2026-11-26T20:19:20.518652+00:00",
-      "last_success_utc": "2026-11-26T20:19:20.518652+00:00",
-      "checked_utc": "2026-11-26T20:19:20.518652+00:00",
-      "stations": 64,
-      "skipped_files": 0,
-      "source_sha256": "29eada49298b71bb19912bf7adef28595b38775b2bb03d11d26bf0884bd7d854",
-      "status": "updated",
-      "last_check_ok": true
+      "status": "regression_preserved",
+      "last_check_ok": false,
+      "rejected_source_sha256": "29eada49298b71bb19912bf7adef28595b38775b2bb03d11d26bf0884bd7d854",
+      "restored_from_commit": "f3ded870b9f280dd0477b37ad15deb2d50bc6d7b",
+      "restored_stations": 62,
+      "restored_monthly_precipitation_values": 642,
+      "restored_annual_precipitation_totals": 62,
+      "note": "Séries anteriores restauradas; publicação histórica em pausa até validação da fonte."
     },
     {
       "year": 2006,
@@ -246,6 +246,6 @@
     }
   ],
   "checked_utc": "2026-11-26T20:19:44.582504+00:00",
-  "last_success_utc": "2026-11-26T20:19:20.518652+00:00",
+  "last_success_utc": "2026-11-25T20:32:19.131062+00:00",
   "status": "error"
 }
