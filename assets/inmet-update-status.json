@@ -239,12 +239,13 @@
       "source_sha256": "e50640dee9556273fcdf02874fc88518c5a82a377e3780eb0fcdf202cb9006fd",
       "processed_utc": "2026-11-06T18:09:32.114103+00:00",
       "last_success_utc": "2026-11-26T23:41:32.479750+00:00",
-      "checked_utc": "2026-11-26T23:41:32.479750+00:00",
-      "status": "unchanged",
-      "last_check_ok": true
+      "checked_utc": "2026-11-27T20:04:07.368791+00:00",
+      "status": "error",
+      "last_check_ok": false,
+      "error": "RuntimeError"
     }
   ],
-  "checked_utc": "2026-11-26T23:42:16.493357+00:00",
+  "checked_utc": "2026-11-27T20:04:14.356392+00:00",
   "last_success_utc": "2026-11-26T23:41:32.479750+00:00",
-  "status": "ok"
+  "status": "error"
 }
